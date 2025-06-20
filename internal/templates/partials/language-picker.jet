@@ -1,7 +1,7 @@
 <div class="language-picker">
     <button class="language-button" onclick="toggleLanguageDropdown()">
         <span class="current-language">
-            {{ if currentLang == "en" }}🇬🇧 English{{ else if currentLang == "cs" }}🇨🇿 Čeština{{ else if currentLang == "" }}🇬🇧 English (default){{ else }}[{{ currentLang }}] Unknown{{ end }}
+            {{ if currentLang == "en" }}🇬🇧 English{{ else if currentLang == "cs" }}🇨🇿 Čeština{{ else if currentLang == "sk" }}🇸🇰 Slovenčina{{ else if currentLang == "" }}🇬🇧 English (default){{ else }}[{{ currentLang }}] Unknown{{ end }}
         </span>
         <span class="dropdown-arrow">▼</span>
     </button>
@@ -14,6 +14,10 @@
         <a href="/lang/cs" class="language-option{{ if currentLang == "cs" }} active{{ end }}">
             <span class="flag">🇨🇿</span>
             <span class="language-name">Čeština</span>
+        </a>
+        <a href="/lang/sk" class="language-option{{ if currentLang == "sk" }} active{{ end }}">
+            <span class="flag">🇸🇰</span>
+            <span class="language-name">Slovenčina</span>
         </a>
     </div>
 </div>

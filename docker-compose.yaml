@@ -57,6 +57,15 @@ services:
       retries: 3
       start_period: 10s
 
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token eyJhIjoiZjdhNmYxODJlNmUwMzhlNGI1MTVkMzNlNjU0ZWE0NDQiLCJ0IjoiNzE2NmU5YzItNzdkNS00MjYxLTlkZjEtNzZlMmQ2MzQ2MzAyIiwicyI6Ik0ySTBObVZqT0RZdFpETm1NUzAwWW1NNExUaG1ZalV0WkRObU5ESmxNMlpsTmpReiJ9
+    depends_on:
+      - app
+    networks:
+      - bitcoinpitch
+    restart: unless-stopped
+
 networks:
   bitcoinpitch:
     driver: bridge

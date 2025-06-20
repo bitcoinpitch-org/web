@@ -225,8 +225,8 @@ function initializeEnhancedLanguageFilter() {
     let currentHighlight = -1;
     let filteredLanguages = [];
 
-    // Get available languages from page (basic fallback)
-    const availableLanguages = ['en', 'es', 'zh', 'hi', 'ar', 'pt', 'ru', 'ja', 'de', 'fr', 'it', 'ko', 'cs', 'pl'];
+    // Use all languages from LANGUAGES constant instead of hardcoded list
+    const availableLanguages = LANGUAGES.map(lang => lang.code);
 
     // Initialize with current selection
     const currentFilter = searchInput.dataset.selected || '';
