@@ -198,16 +198,22 @@ func (h *RegistrationHandler) RegisterUser(c *fiber.Ctx) error {
 
 	// Send verification email
 	siteURL := os.Getenv("SITE_URL")
+	log.Printf("🔍 DEBUG: Raw SITE_URL from environment: '%s'", siteURL)
 	if siteURL == "" {
 		siteURL = "http://localhost:8090" // fallback for development
+		log.Printf("🔍 DEBUG: Using fallback URL: '%s'", siteURL)
+	} else {
+		log.Printf("🔍 DEBUG: Using environment SITE_URL: '%s'", siteURL)
 	}
 	verificationURL := fmt.Sprintf("%s/verify-email?token=%s", siteURL, token)
+	log.Printf("🔍 DEBUG: Generated verification URL: '%s'", verificationURL)
 
 	displayName := username
 	if displayName == "" {
 		displayName = email
 	}
 
+	log.Printf("🔍 DEBUG: About to send verification email to: %s", email)
 	if err := h.emailSvc.SendVerificationEmail(email, displayName, verificationURL); err != nil {
 		log.Printf("Error sending verification email: %v", err)
 		// Don't fail registration, just show a different message
@@ -217,6 +223,7 @@ func (h *RegistrationHandler) RegisterUser(c *fiber.Ctx) error {
 			"EmailError": "Registration successful, but we couldn't send the verification email. Please contact support.",
 		})
 	}
+	log.Printf("🔍 DEBUG: Verification email sent successfully")
 
 	return c.Render("pages/register-success", fiber.Map{
 		"Title": "Registration Successful - BitcoinPitch.org",
