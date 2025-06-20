@@ -38,7 +38,7 @@ A platform for collecting and sharing Bitcoin-related pitches. Users can submit,
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/bitcoinpitch.org.git
+   git clone https://github.com/bitcoinpitch-org/web.git
    cd bitcoinpitch.org
    ```
 
