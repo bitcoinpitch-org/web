@@ -77,6 +77,9 @@ func PitchFormHandler(c *fiber.Ctx) error {
 	// Always set CurrentUser (even if nil)
 	vars.Set("CurrentUser", currentUser)
 
+	// Add footer configuration
+	addFooterConfig(c, vars)
+
 	// Render the template
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, vars, nil); err != nil {

@@ -155,5 +155,10 @@ func GetConfigCategories() []ConfigCategory {
 			DisplayName: "Internationalization",
 			Description: "Language and translation settings",
 		},
+		{
+			Name:        "footer",
+			DisplayName: "Footer Links",
+			Description: "Manage footer navigation links and sections",
+		},
 	}
 }

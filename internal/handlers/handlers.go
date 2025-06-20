@@ -68,6 +68,9 @@ func HomeHandler(c *fiber.Ctx) error {
 	configService := c.Locals("configService").(*config.Service)
 	paginationConfig := configService.PaginationConfig(c.Context())
 
+	// Add footer configuration
+	addFooterConfig(c, vars)
+
 	// Parse pagination parameters
 	page, _ := strconv.Atoi(c.Query("page", "1"))
 	if page < 1 {
@@ -444,6 +447,9 @@ func PitchListHandler(c *fiber.Ctx) error {
 		vars.Set("CsrfToken", csrfToken)
 	}
 
+	// Add footer configuration
+	addFooterConfig(c, vars)
+
 	// Check if this is an HTMX request for pagination
 	isHTMX := c.Get("HX-Request") == "true"
 	var templateName string
@@ -480,6 +486,9 @@ func PitchViewHandler(c *fiber.Ctx) error {
 	if csrfToken := c.Locals("csrf"); csrfToken != nil {
 		vars.Set("CsrfToken", csrfToken)
 	}
+
+	// Add footer configuration
+	addFooterConfig(c, vars)
 
 	t, err := view.GetTemplate("pages/pitch-view.jet")
 	if err != nil {
@@ -544,6 +553,9 @@ func PitchEditHandler(c *fiber.Ctx) error {
 		if csrfToken := c.Locals("csrf"); csrfToken != nil {
 			vars.Set("CsrfToken", csrfToken)
 		}
+
+		// Add footer configuration
+		addFooterConfig(c, vars)
 
 		var buf bytes.Buffer
 		if err := tmpl.Execute(&buf, vars, nil); err != nil {
@@ -978,4 +990,33 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// addFooterConfig adds footer configuration to template variables
+func addFooterConfig(c *fiber.Ctx, vars jet.VarMap) {
+	defer func() {
+		if r := recover(); r != nil {
+			println("[ERROR] addFooterConfig panic:", fmt.Sprintf("%v", r))
+			// Set FooterConfig to nil so template fallbacks work
+			vars.Set("FooterConfig", nil)
+		}
+	}()
+
+	configService := c.Locals("configService")
+	if configService == nil {
+		println("[DEBUG] addFooterConfig: configService not found in context")
+		vars.Set("FooterConfig", nil)
+		return
+	}
+
+	cs, ok := configService.(*config.Service)
+	if !ok {
+		println("[DEBUG] addFooterConfig: configService type assertion failed")
+		vars.Set("FooterConfig", nil)
+		return
+	}
+
+	footerConfig := cs.FooterConfig(c.Context())
+	vars.Set("FooterConfig", footerConfig)
+	println("[DEBUG] addFooterConfig: successfully set footer config")
 }

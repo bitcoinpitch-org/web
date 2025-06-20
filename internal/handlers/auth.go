@@ -538,6 +538,9 @@ func UserProfileHandler(c *fiber.Ctx) error {
 		vars.Set("CsrfToken", csrfToken)
 	}
 
+	// Add footer configuration
+	addFooterConfig(c, vars)
+
 	t, err := view.GetTemplate("pages/user-profile.jet")
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("Template error: " + err.Error())
@@ -632,6 +635,9 @@ func UserPitchesHandler(c *fiber.Ctx) error {
 	if csrfToken := c.Locals("csrf"); csrfToken != nil {
 		vars.Set("CsrfToken", csrfToken)
 	}
+
+	// Add footer configuration
+	addFooterConfig(c, vars)
 
 	t, err := view.GetTemplate("pages/user-pitches.jet")
 	if err != nil {

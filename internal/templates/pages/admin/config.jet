@@ -152,6 +152,16 @@
                             <li><strong>{{ t("admin.default_lang") }}:</strong> {{ t("admin.default_lang_help") }}</li>
                             <li><strong>{{ t("admin.enabled_langs") }}:</strong> {{ t("admin.enabled_langs_help") }}</li>
                         </ul>
+                    {{ else if CurrentCategory == "footer" }}
+                        <p>Configure footer sections and links displayed at the bottom of all pages.</p>
+                        <ul>
+                            <li><strong>About Section:</strong> Edit the about text and description</li>
+                            <li><strong>Categories Section:</strong> Manage main category navigation links</li>
+                            <li><strong>Resources Section:</strong> Configure resource and policy links</li>
+                            <li><strong>Connect Section:</strong> Manage social media and external links</li>
+                            <li><strong>Bottom Text:</strong> Footer tagline and copyright notice</li>
+                        </ul>
+                        <p><strong>JSON Format:</strong> Use proper JSON format for sections with {"enabled": true, "title": "Title", "links": [{"name": "Name", "url": "/url", "external": false}]}</p>
                     {{ end }}
                 </div>
             </div>

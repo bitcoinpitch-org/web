@@ -1,11 +1,28 @@
 <footer class="site-footer">
     <div class="container">
         <div class="footer-content">
+            {{ if FooterConfig && FooterConfig.AboutSection && FooterConfig.AboutSection.Enabled }}
+            <div class="footer-section">
+                <h3>{{ FooterConfig.AboutSection.Title }}</h3>
+                <p>{{ FooterConfig.AboutSection.Description }}</p>
+            </div>
+            {{ else }}
             <div class="footer-section">
                 <h3>About BitcoinPitch.org</h3>
                 <p>A platform for collecting and sharing Bitcoin-related pitches. Find the perfect way to explain Bitcoin, Lightning, and Cashu to anyone.</p>
             </div>
+            {{ end }}
             
+            {{ if FooterConfig && FooterConfig.CategoriesSection && FooterConfig.CategoriesSection.Enabled }}
+            <div class="footer-section">
+                <h3>{{ FooterConfig.CategoriesSection.Title }}</h3>
+                <ul class="footer-nav">
+                    {{ range FooterConfig.CategoriesSection.Links }}
+                    <li><a href="{{ .URL }}"{{ if .External }} target="_blank" rel="noopener"{{ end }}>{{ .Name }}</a></li>
+                    {{ end }}
+                </ul>
+            </div>
+            {{ else }}
             <div class="footer-section">
                 <h3>Categories</h3>
                 <ul class="footer-nav">
@@ -14,7 +31,18 @@
                     <li><a href="/cashu">Cashu</a></li>
                 </ul>
             </div>
+            {{ end }}
             
+            {{ if FooterConfig && FooterConfig.ResourcesSection && FooterConfig.ResourcesSection.Enabled }}
+            <div class="footer-section">
+                <h3>{{ FooterConfig.ResourcesSection.Title }}</h3>
+                <ul class="footer-nav">
+                    {{ range FooterConfig.ResourcesSection.Links }}
+                    <li><a href="{{ .URL }}"{{ if .External }} target="_blank" rel="noopener"{{ end }}>{{ .Name }}</a></li>
+                    {{ end }}
+                </ul>
+            </div>
+            {{ else }}
             <div class="footer-section">
                 <h3>Resources</h3>
                 <ul class="footer-nav">
@@ -23,7 +51,18 @@
                     <li><a href="/terms">Terms of Service</a></li>
                 </ul>
             </div>
+            {{ end }}
             
+            {{ if FooterConfig && FooterConfig.ConnectSection && FooterConfig.ConnectSection.Enabled }}
+            <div class="footer-section">
+                <h3>{{ FooterConfig.ConnectSection.Title }}</h3>
+                <ul class="footer-nav">
+                    {{ range FooterConfig.ConnectSection.Links }}
+                    <li><a href="{{ .URL }}"{{ if .External }} target="_blank" rel="noopener"{{ end }}>{{ .Name }}</a></li>
+                    {{ end }}
+                </ul>
+            </div>
+            {{ else }}
             <div class="footer-section">
                 <h3>Connect</h3>
                 <ul class="footer-nav">
@@ -32,11 +71,20 @@
                     <li><a href="https://nostr.com/npub1bitcoinpitch" target="_blank" rel="noopener">Nostr</a></li>
                 </ul>
             </div>
+            {{ end }}
         </div>
         
         <div class="footer-bottom">
-            <p>&copy; 2025 BitcoinPitch.org. All rights reserved.</p>
-            <p class="footer-credits">Building a better Bitcoin narrative, one pitch at a time.</p>
+            {{ if FooterConfig && FooterConfig.Copyright }}
+                <p>{{ FooterConfig.Copyright | raw }}</p>
+            {{ else }}
+                <p>&copy; 2025 BitcoinPitch.org. All rights reserved.</p>
+            {{ end }}
+            {{ if FooterConfig && FooterConfig.BottomText }}
+                <p class="footer-credits">{{ FooterConfig.BottomText }}</p>
+            {{ else }}
+                <p class="footer-credits">Building a better Bitcoin narrative, one pitch at a time.</p>
+            {{ end }}
             <!-- Tutorial debug controls (only visible in development) -->
             <div style="margin-top: 1rem; font-size: 0.8rem; opacity: 0.7;">
                 <button onclick="Tutorial.reset(); location.reload();" style="padding: 0.25rem 0.5rem; background: #666; color: white; border: none; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">Reset Tutorial</button>

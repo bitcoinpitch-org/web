@@ -89,7 +89,10 @@
       "privacy": "Privacy",
       "terms": "Terms",
       "contact": "Contact",
-      "github": "GitHub"
+      "github": "GitHub",
+      "management": "Footer Management",
+      "sections": "Footer Sections",
+      "links": "Footer Links"
     }
   },
   "errors": {

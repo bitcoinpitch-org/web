@@ -68,6 +68,9 @@ func (h *AdminHandler) AdminDashboardHandler(c *fiber.Ctx) error {
 		vars.Set("CsrfToken", csrfToken)
 	}
 
+	// Add footer configuration
+	addFooterConfig(c, vars)
+
 	t, err := view.GetTemplate("pages/admin/dashboard.jet")
 	if err != nil {
 		log.Printf("[DEBUG] Template error: %v", err)
@@ -133,6 +136,9 @@ func (h *AdminHandler) AdminConfigHandler(c *fiber.Ctx) error {
 	if csrfToken := c.Locals("csrf"); csrfToken != nil {
 		vars.Set("CsrfToken", csrfToken)
 	}
+
+	// Add footer configuration
+	addFooterConfig(c, vars)
 
 	t, err := view.GetTemplate("pages/admin/config.jet")
 	if err != nil {
@@ -314,6 +320,9 @@ func (h *AdminHandler) AdminUsersHandler(c *fiber.Ctx) error {
 		vars.Set("CsrfToken", csrfToken)
 	}
 
+	// Add footer configuration
+	addFooterConfig(c, vars)
+
 	log.Printf("[DEBUG] AdminUsers: About to render template")
 	t, err := view.GetTemplate("pages/admin/users.jet")
 	if err != nil {
@@ -440,6 +449,9 @@ func (h *AdminHandler) AdminAuditLogsHandler(c *fiber.Ctx) error {
 	if csrfToken := c.Locals("csrf"); csrfToken != nil {
 		vars.Set("CsrfToken", csrfToken)
 	}
+
+	// Add footer configuration
+	addFooterConfig(c, vars)
 
 	log.Printf("[DEBUG] AdminAuditLogs: About to render template")
 	t, err := view.GetTemplate("pages/admin/audit-logs.jet")

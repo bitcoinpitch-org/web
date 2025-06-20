@@ -351,3 +351,138 @@ func (s *Service) GetStringSlice(ctx context.Context, key string) []string {
 	}
 	return result
 }
+
+// FooterSection represents a footer section with title and links
+type FooterSection struct {
+	Enabled     bool         `json:"enabled"`
+	Title       string       `json:"title"`
+	Description string       `json:"description,omitempty"`
+	Links       []FooterLink `json:"links,omitempty"`
+}
+
+// FooterLink represents a single link in footer
+type FooterLink struct {
+	Name     string `json:"name"`
+	URL      string `json:"url"`
+	External bool   `json:"external,omitempty"`
+}
+
+// FooterConfigData holds the complete footer configuration
+type FooterConfigData struct {
+	AboutSection      FooterSection `json:"about_section"`
+	CategoriesSection FooterSection `json:"categories_section"`
+	ResourcesSection  FooterSection `json:"resources_section"`
+	ConnectSection    FooterSection `json:"connect_section"`
+	BottomText        string        `json:"bottom_text"`
+	Copyright         string        `json:"copyright"`
+}
+
+// FooterConfig returns the complete footer configuration
+func (s *Service) FooterConfig(ctx context.Context) *FooterConfigData {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("[ERROR] FooterConfig panic: %v\n", r)
+		}
+	}()
+
+	config := &FooterConfigData{}
+
+	// Load about section
+	if err := s.GetJSON(ctx, "footer_about_section", &config.AboutSection, FooterSection{
+		Enabled:     true,
+		Title:       "About BitcoinPitch.org",
+		Description: "A platform for collecting and sharing Bitcoin-related pitches. Find the perfect way to explain Bitcoin, Lightning, and Cashu to anyone.",
+	}); err != nil {
+		fmt.Printf("[DEBUG] FooterConfig: Error loading about section: %v\n", err)
+		config.AboutSection = FooterSection{
+			Enabled:     true,
+			Title:       "About BitcoinPitch.org",
+			Description: "A platform for collecting and sharing Bitcoin-related pitches. Find the perfect way to explain Bitcoin, Lightning, and Cashu to anyone.",
+		}
+	}
+	fmt.Printf("[DEBUG] FooterConfig: AboutSection loaded - Enabled: %v, Title: %s\n", config.AboutSection.Enabled, config.AboutSection.Title)
+
+	// Load categories section
+	if err := s.GetJSON(ctx, "footer_categories_section", &config.CategoriesSection, FooterSection{
+		Enabled: true,
+		Title:   "Categories",
+		Links: []FooterLink{
+			{Name: "Bitcoin", URL: "/bitcoin"},
+			{Name: "Lightning", URL: "/lightning"},
+			{Name: "Cashu", URL: "/cashu"},
+		},
+	}); err != nil {
+		fmt.Printf("[DEBUG] FooterConfig: Error loading categories section: %v\n", err)
+		config.CategoriesSection = FooterSection{
+			Enabled: true,
+			Title:   "Categories",
+			Links: []FooterLink{
+				{Name: "Bitcoin", URL: "/bitcoin"},
+				{Name: "Lightning", URL: "/lightning"},
+				{Name: "Cashu", URL: "/cashu"},
+			},
+		}
+	}
+	fmt.Printf("[DEBUG] FooterConfig: CategoriesSection loaded - Enabled: %v, Title: %s, Links count: %d\n",
+		config.CategoriesSection.Enabled, config.CategoriesSection.Title, len(config.CategoriesSection.Links))
+	for i, link := range config.CategoriesSection.Links {
+		fmt.Printf("[DEBUG] FooterConfig: Categories Link %d - Name: %s, URL: %s, External: %v\n", i, link.Name, link.URL, link.External)
+	}
+
+	// Load resources section
+	if err := s.GetJSON(ctx, "footer_resources_section", &config.ResourcesSection, FooterSection{
+		Enabled: true,
+		Title:   "Resources",
+		Links: []FooterLink{
+			{Name: "About", URL: "/about"},
+			{Name: "Privacy Policy", URL: "/privacy"},
+			{Name: "Terms of Service", URL: "/terms"},
+		},
+	}); err != nil {
+		fmt.Printf("[DEBUG] FooterConfig: Error loading resources section: %v\n", err)
+		config.ResourcesSection = FooterSection{
+			Enabled: true,
+			Title:   "Resources",
+			Links: []FooterLink{
+				{Name: "About", URL: "/about"},
+				{Name: "Privacy Policy", URL: "/privacy"},
+				{Name: "Terms of Service", URL: "/terms"},
+			},
+		}
+	}
+	fmt.Printf("[DEBUG] FooterConfig: ResourcesSection loaded - Enabled: %v, Title: %s, Links count: %d\n",
+		config.ResourcesSection.Enabled, config.ResourcesSection.Title, len(config.ResourcesSection.Links))
+
+	// Load connect section
+	if err := s.GetJSON(ctx, "footer_connect_section", &config.ConnectSection, FooterSection{
+		Enabled: true,
+		Title:   "Connect",
+		Links: []FooterLink{
+			{Name: "Twitter", URL: "https://twitter.com/bitcoinpitch", External: true},
+			{Name: "GitHub", URL: "https://github.com/bitcoinpitch/bitcoinpitch.org", External: true},
+			{Name: "Nostr", URL: "https://nostr.com/npub1bitcoinpitch", External: true},
+		},
+	}); err != nil {
+		fmt.Printf("[DEBUG] FooterConfig: Error loading connect section: %v\n", err)
+		config.ConnectSection = FooterSection{
+			Enabled: true,
+			Title:   "Connect",
+			Links: []FooterLink{
+				{Name: "Twitter", URL: "https://twitter.com/bitcoinpitch", External: true},
+				{Name: "GitHub", URL: "https://github.com/bitcoinpitch/bitcoinpitch.org", External: true},
+				{Name: "Nostr", URL: "https://nostr.com/npub1bitcoinpitch", External: true},
+			},
+		}
+	}
+	fmt.Printf("[DEBUG] FooterConfig: ConnectSection loaded - Enabled: %v, Title: %s, Links count: %d\n",
+		config.ConnectSection.Enabled, config.ConnectSection.Title, len(config.ConnectSection.Links))
+
+	// Load bottom text and copyright
+	config.BottomText = s.GetString(ctx, "footer_bottom_text", "Building a better Bitcoin narrative, one pitch at a time.")
+	config.Copyright = s.GetString(ctx, "footer_copyright", "&copy; 2025 BitcoinPitch.org. All rights reserved.")
+
+	fmt.Printf("[DEBUG] FooterConfig: BottomText: %s\n", config.BottomText)
+	fmt.Printf("[DEBUG] FooterConfig: Copyright: %s\n", config.Copyright)
+	fmt.Printf("[DEBUG] FooterConfig: Successfully loaded footer config with 4 sections\n")
+	return config
+}
