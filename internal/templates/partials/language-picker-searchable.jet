@@ -1,0 +1,342 @@
+<!-- Searchable Language Picker Component -->
+<div class="language-picker-searchable">
+    <label for="language-search">Language</label>
+    <div class="language-search-container">
+        <input type="text" 
+               id="language-search" 
+               placeholder="Search or select a language..." 
+               autocomplete="off"
+               data-selected="{{ if Pitch.Language }}{{ Pitch.Language }}{{ else }}en{{ end }}">
+        <input type="hidden" 
+               name="language" 
+               id="language-hidden" 
+               value="{{ if Pitch.Language }}{{ Pitch.Language }}{{ else }}en{{ end }}">
+        <div class="language-dropdown-searchable" id="language-dropdown-searchable">
+            <!-- Languages will be populated by JavaScript -->
+        </div>
+        <div class="selected-language" id="selected-language">
+            <span class="flag">🇬🇧</span>
+            <span class="name">English</span>
+        </div>
+    </div>
+</div>
+
+<style>
+.language-picker-searchable {
+    position: relative;
+}
+
+.language-search-container {
+    position: relative;
+    width: 100%;
+}
+
+#language-search {
+    width: 100%;
+    padding: 10px 40px 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    background: white;
+}
+
+#language-search:focus {
+    outline: none;
+    border-color: #f7931a;
+    box-shadow: 0 0 0 2px rgba(247, 147, 26, 0.1);
+}
+
+.selected-language {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    pointer-events: none;
+    font-size: 14px;
+}
+
+.language-dropdown-searchable {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+
+.language-dropdown-searchable.show {
+    display: block;
+}
+
+.language-option-searchable {
+    padding: 10px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.language-option-searchable:hover {
+    background-color: #f8f8f8;
+}
+
+.language-option-searchable.highlighted {
+    background-color: #f7931a;
+    color: white;
+}
+
+.language-option-searchable .flag {
+    font-size: 16px;
+}
+
+.language-option-searchable .name {
+    flex: 1;
+}
+
+.language-option-searchable .usage-count {
+    font-size: 12px;
+    color: #666;
+    background: #f0f0f0;
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.language-option-searchable.highlighted .usage-count {
+    background: rgba(255,255,255,0.2);
+    color: white;
+}
+
+.language-group-header {
+    padding: 8px 12px;
+    background: #f8f8f8;
+    font-weight: bold;
+    font-size: 12px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+</style>
+
+<script>
+(function() {
+    // Complete language database with flags and native names
+    const LANGUAGES = [
+        { code: 'en', name: 'English', native: 'English', flag: '🇬🇧' },
+        { code: 'es', name: 'Spanish', native: 'Español', flag: '🇪🇸' },
+        { code: 'zh', name: 'Chinese', native: '中文', flag: '🇨🇳' },
+        { code: 'hi', name: 'Hindi', native: 'हिन्दी', flag: '🇮🇳' },
+        { code: 'ar', name: 'Arabic', native: 'العربية', flag: '🇸🇦' },
+        { code: 'pt', name: 'Portuguese', native: 'Português', flag: '🇵🇹' },
+        { code: 'ru', name: 'Russian', native: 'Русский', flag: '🇷🇺' },
+        { code: 'ja', name: 'Japanese', native: '日本語', flag: '🇯🇵' },
+        { code: 'de', name: 'German', native: 'Deutsch', flag: '🇩🇪' },
+        { code: 'fr', name: 'French', native: 'Français', flag: '🇫🇷' },
+        { code: 'it', name: 'Italian', native: 'Italiano', flag: '🇮🇹' },
+        { code: 'ko', name: 'Korean', native: '한국어', flag: '🇰🇷' },
+        { code: 'cs', name: 'Czech', native: 'Čeština', flag: '🇨🇿' },
+        { code: 'pl', name: 'Polish', native: 'Polski', flag: '🇵🇱' },
+        { code: 'nl', name: 'Dutch', native: 'Nederlands', flag: '🇳🇱' },
+        { code: 'sv', name: 'Swedish', native: 'Svenska', flag: '🇸🇪' },
+        { code: 'da', name: 'Danish', native: 'Dansk', flag: '🇩🇰' },
+        { code: 'no', name: 'Norwegian', native: 'Norsk', flag: '🇳🇴' },
+        { code: 'fi', name: 'Finnish', native: 'Suomi', flag: '🇫🇮' },
+        { code: 'hu', name: 'Hungarian', native: 'Magyar', flag: '🇭🇺' },
+        { code: 'ro', name: 'Romanian', native: 'Română', flag: '🇷🇴' },
+        { code: 'bg', name: 'Bulgarian', native: 'Български', flag: '🇧🇬' },
+        { code: 'hr', name: 'Croatian', native: 'Hrvatski', flag: '🇭🇷' },
+        { code: 'sl', name: 'Slovenian', native: 'Slovenščina', flag: '🇸🇮' },
+        { code: 'sk', name: 'Slovak', native: 'Slovenčina', flag: '🇸🇰' },
+        { code: 'et', name: 'Estonian', native: 'Eesti', flag: '🇪🇪' },
+        { code: 'lv', name: 'Latvian', native: 'Latviešu', flag: '🇱🇻' },
+        { code: 'lt', name: 'Lithuanian', native: 'Lietuvių', flag: '🇱🇹' },
+        { code: 'el', name: 'Greek', native: 'Ελληνικά', flag: '🇬🇷' },
+        { code: 'tr', name: 'Turkish', native: 'Türkçe', flag: '🇹🇷' },
+        { code: 'he', name: 'Hebrew', native: 'עברית', flag: '🇮🇱' },
+        { code: 'fa', name: 'Persian', native: 'فارسی', flag: '🇮🇷' },
+        { code: 'th', name: 'Thai', native: 'ไทย', flag: '🇹🇭' },
+        { code: 'vi', name: 'Vietnamese', native: 'Tiếng Việt', flag: '🇻🇳' },
+        { code: 'id', name: 'Indonesian', native: 'Bahasa Indonesia', flag: '🇮🇩' },
+        { code: 'ms', name: 'Malay', native: 'Bahasa Malaysia', flag: '🇲🇾' },
+        { code: 'tl', name: 'Filipino', native: 'Filipino', flag: '🇵🇭' },
+        { code: 'sw', name: 'Swahili', native: 'Kiswahili', flag: '🇰🇪' },
+        { code: 'af', name: 'Afrikaans', native: 'Afrikaans', flag: '🇿🇦' }
+    ];
+
+    let languageUsage = {}; // Will be populated from server
+    let currentHighlight = -1;
+    let filteredLanguages = [];
+
+    const searchInput = document.getElementById('language-search');
+    const hiddenInput = document.getElementById('language-hidden');
+    const dropdown = document.getElementById('language-dropdown-searchable');
+    const selectedDisplay = document.getElementById('selected-language');
+
+    if (!searchInput || !hiddenInput || !dropdown || !selectedDisplay) {
+        console.warn('Language picker elements not found');
+        return;
+    }
+
+    // Initialize with current selection
+    const currentLang = searchInput.dataset.selected || 'en';
+    updateSelectedDisplay(currentLang);
+
+    // Fetch language usage data from server
+    async function fetchLanguageUsage() {
+        try {
+            const response = await fetch('/api/languages/usage');
+            if (response.ok) {
+                languageUsage = await response.json();
+            }
+        } catch (error) {
+            console.warn('Could not fetch language usage data:', error);
+        }
+        renderLanguages(''); // Render after getting usage data
+    }
+
+    function updateSelectedDisplay(langCode) {
+        const lang = LANGUAGES.find(l => l.code === langCode) || LANGUAGES[0];
+        selectedDisplay.innerHTML = `
+            <span class="flag">${lang.flag}</span>
+            <span class="name">${lang.native}</span>
+        `;
+        hiddenInput.value = langCode;
+    }
+
+    function renderLanguages(searchTerm) {
+        // Filter languages based on search term
+        filteredLanguages = LANGUAGES.filter(lang => {
+            const term = searchTerm.toLowerCase();
+            return lang.name.toLowerCase().includes(term) || 
+                   lang.native.toLowerCase().includes(term) ||
+                   lang.code.toLowerCase().includes(term);
+        });
+
+        // Sort languages: most used first, then alphabetically
+        filteredLanguages.sort((a, b) => {
+            const usageA = languageUsage[a.code] || 0;
+            const usageB = languageUsage[b.code] || 0;
+            
+            if (usageA !== usageB) {
+                return usageB - usageA; // Most used first
+            }
+            return a.native.localeCompare(b.native); // Then alphabetically
+        });
+
+        // Group languages
+        const popularLanguages = filteredLanguages.filter(lang => (languageUsage[lang.code] || 0) > 0);
+        const otherLanguages = filteredLanguages.filter(lang => (languageUsage[lang.code] || 0) === 0);
+
+        let html = '';
+        
+        if (popularLanguages.length > 0) {
+            html += '<div class="language-group-header">Most Used</div>';
+            popularLanguages.forEach((lang, index) => {
+                const count = languageUsage[lang.code] || 0;
+                html += `
+                    <div class="language-option-searchable" data-code="${lang.code}" data-index="${index}">
+                        <span class="flag">${lang.flag}</span>
+                        <span class="name">${lang.native}</span>
+                        <span class="usage-count">${count}</span>
+                    </div>
+                `;
+            });
+        }
+
+        if (otherLanguages.length > 0) {
+            html += '<div class="language-group-header">Other Languages</div>';
+            otherLanguages.forEach((lang, index) => {
+                const globalIndex = popularLanguages.length + index;
+                html += `
+                    <div class="language-option-searchable" data-code="${lang.code}" data-index="${globalIndex}">
+                        <span class="flag">${lang.flag}</span>
+                        <span class="name">${lang.native}</span>
+                    </div>
+                `;
+            });
+        }
+
+        dropdown.innerHTML = html;
+        currentHighlight = -1;
+
+        // Add click handlers
+        dropdown.querySelectorAll('.language-option-searchable').forEach(option => {
+            option.addEventListener('click', function() {
+                const langCode = this.dataset.code;
+                updateSelectedDisplay(langCode);
+                searchInput.value = '';
+                dropdown.classList.remove('show');
+            });
+        });
+    }
+
+    function highlightOption(index) {
+        const options = dropdown.querySelectorAll('.language-option-searchable');
+        options.forEach(opt => opt.classList.remove('highlighted'));
+        
+        if (index >= 0 && index < options.length) {
+            options[index].classList.add('highlighted');
+            options[index].scrollIntoView({ block: 'nearest' });
+        }
+    }
+
+    // Event handlers
+    searchInput.addEventListener('input', function() {
+        const term = this.value;
+        renderLanguages(term);
+        dropdown.classList.add('show');
+        currentHighlight = -1;
+    });
+
+    searchInput.addEventListener('focus', function() {
+        renderLanguages(this.value);
+        dropdown.classList.add('show');
+    });
+
+    searchInput.addEventListener('keydown', function(e) {
+        const options = dropdown.querySelectorAll('.language-option-searchable');
+        
+        switch(e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                currentHighlight = Math.min(currentHighlight + 1, options.length - 1);
+                highlightOption(currentHighlight);
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                currentHighlight = Math.max(currentHighlight - 1, -1);
+                highlightOption(currentHighlight);
+                break;
+            case 'Enter':
+                e.preventDefault();
+                if (currentHighlight >= 0 && options[currentHighlight]) {
+                    options[currentHighlight].click();
+                }
+                break;
+            case 'Escape':
+                dropdown.classList.remove('show');
+                this.blur();
+                break;
+        }
+    });
+
+    // Click outside to close
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.remove('show');
+        }
+    });
+
+    // Initialize
+    fetchLanguageUsage();
+})();
+</script> 

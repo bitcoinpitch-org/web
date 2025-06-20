@@ -1,0 +1,52 @@
+<footer class="site-footer">
+    <div class="container">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>About BitcoinPitch.org</h3>
+                <p>A platform for collecting and sharing Bitcoin-related pitches. Find the perfect way to explain Bitcoin, Lightning, and Cashu to anyone.</p>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Categories</h3>
+                <ul class="footer-nav">
+                    <li><a href="/bitcoin">Bitcoin</a></li>
+                    <li><a href="/lightning">Lightning</a></li>
+                    <li><a href="/cashu">Cashu</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Resources</h3>
+                <ul class="footer-nav">
+                    <li><a href="/about">About</a></li>
+                    <li><a href="/privacy">Privacy Policy</a></li>
+                    <li><a href="/terms">Terms of Service</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Connect</h3>
+                <ul class="footer-nav">
+                    <li><a href="https://twitter.com/bitcoinpitch" target="_blank" rel="noopener">Twitter</a></li>
+                    <li><a href="https://github.com/bitcoinpitch/bitcoinpitch.org" target="_blank" rel="noopener">GitHub</a></li>
+                    <li><a href="https://nostr.com/npub1bitcoinpitch" target="_blank" rel="noopener">Nostr</a></li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="footer-bottom">
+            <p>&copy; 2025 BitcoinPitch.org. All rights reserved.</p>
+            <p class="footer-credits">Building a better Bitcoin narrative, one pitch at a time.</p>
+            <!-- Tutorial debug controls (only visible in development) -->
+            <div style="margin-top: 1rem; font-size: 0.8rem; opacity: 0.7;">
+                <button onclick="Tutorial.reset(); location.reload();" style="padding: 0.25rem 0.5rem; background: #666; color: white; border: none; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">Reset Tutorial</button>
+                <button onclick="Tutorial.start();" style="padding: 0.25rem 0.5rem; background: var(--color-primary); color: white; border: none; border-radius: 4px; font-size: 0.7rem; cursor: pointer; margin-left: 0.5rem;">Start Tutorial</button>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- Auth Modal -->
+<div id="auth-modal" class="modal" hx-target="this" hx-swap="outerHTML">
+    <!-- Modal content will be loaded via HTMX -->
+</div> 

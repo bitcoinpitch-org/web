@@ -1,0 +1,359 @@
+<header class="site-header">
+    <div class="container">
+        <!-- Site title and tagline centered -->
+        <div class="header-brand">
+            <p class="tagline">{{ t("ui.header.tagline", currentLang) }}</p>
+            <a href="/" class="site-title">
+                <span class="title-text">
+                    BitcoinPitch.org
+                    <span class="beta-sticker">BETA</span>
+                </span>
+            </a>
+        </div>
+        
+        <!-- Add Your Pitch Button -->
+        {{ if ShowUserMenu }}
+            <button class="add-pitch" hx-get="/pitch/form" hx-target="#pitch-form-modal .modal-content" hx-trigger="click">{{ t("ui.header.addPitch", currentLang) }}</button>
+        {{ else }}
+            <button class="add-pitch" hx-get="/auth/login" hx-target="#auth-modal" hx-trigger="click">{{ t("ui.header.loginAndAddPitch", currentLang) }}</button>
+        {{ end }}
+
+        <!-- Auth section positioned absolute -->
+        <div class="header-auth">
+            <div class="header-nav">
+                {{ include "language-picker.jet" }}
+                {{ if ShowUserMenu }}
+                    {{ include "auth-menu-authenticated.jet" }}
+                {{ else }}
+                    {{ include "auth-menu-anonymous.jet" }}
+                {{ end }}
+            </div>
+        </div>
+        
+        <!-- Category Navigation -->
+        <nav class="main-nav">
+            <div class="nav-tabs">
+                <a href="/bitcoin" class="nav-tab{{ if isset(Category) }}{{ if Category == "bitcoin" }} active{{ end }}{{ end }}">{{ t("ui.navigation.bitcoin", currentLang) }}</a>
+                <a href="/lightning" class="nav-tab{{ if isset(Category) }}{{ if Category == "lightning" }} active{{ end }}{{ end }}">{{ t("ui.navigation.lightning", currentLang) }}</a>
+                <a href="/cashu" class="nav-tab{{ if isset(Category) }}{{ if Category == "cashu" }} active{{ end }}{{ end }}">{{ t("ui.navigation.cashu", currentLang) }}</a>
+            </div>
+        </nav>
+
+        <!-- Pitch Type Navigation -->
+        <nav class="pitch-types">
+            <a href="javascript:void(0)" onclick="filterByLength('one-liner')" class="type" data-type="one-liner">{{ t("ui.navigation.oneLiner", currentLang) }}</a>
+            <a href="javascript:void(0)" onclick="filterByLength('sms')" class="type" data-type="sms">{{ t("ui.navigation.sms", currentLang) }}</a>
+            <a href="javascript:void(0)" onclick="filterByLength('tweet')" class="type" data-type="tweet">{{ t("ui.navigation.tweet", currentLang) }}</a>
+            <a href="javascript:void(0)" onclick="filterByLength('elevator')" class="type" data-type="elevator">{{ t("ui.navigation.elevator", currentLang) }}</a>
+        </nav>
+
+        <!-- Enhanced Language Filter -->
+        {{ if isset(AvailableLanguages) }}
+        {{ if AvailableLanguages }}
+        {{ if len(AvailableLanguages) > 1 }}
+        <div class="language-filter-enhanced" id="language-filter-enhanced">
+            <label for="language-filter-search">{{ t("ui.filters.byLanguage", currentLang) }}:</label>
+            <div class="language-filter-container">
+                <input type="text" 
+                       id="language-filter-search" 
+                       placeholder="{{ t("searchLanguages", currentLang) }}" 
+                       autocomplete="off"
+                       data-selected="{{ if isset(LanguageFilter) }}{{ LanguageFilter }}{{ end }}">
+                <div class="language-filter-dropdown" id="language-filter-dropdown">
+                    <!-- Languages will be populated by JavaScript -->
+                </div>
+                <div class="language-filter-selected" id="language-filter-selected">
+                    {{ if isset(LanguageFilter) }}{{ if LanguageFilter }}
+                        <span class="flag">🌐</span>
+                        <span class="name">{{ LanguageFilter }}</span>
+                    {{ else }}
+                        <span class="flag">🔍</span>
+                        <span class="name">{{ t("searchLanguages", currentLang) }}</span>
+                    {{ end }}{{ else }}
+                        <span class="flag">🔍</span>
+                        <span class="name">{{ t("searchLanguages", currentLang) }}</span>
+                    {{ end }}
+                </div>
+            </div>
+        </div>
+        {{ end }}
+        {{ end }}
+        {{ end }}
+    </div>
+</header>
+
+<!-- Modal Containers -->
+<div id="auth-modal" class="auth-modal-container"></div>
+<div id="pitch-form-modal" class="modal">
+    <div class="modal-content"></div>
+</div>
+<div id="delete-confirm-modal" class="modal">
+    <div class="modal-content"></div>
+</div>
+
+<!-- Flash messages disabled for testing -->
+
+<script>
+// Handle modal display after HTMX loads content
+document.body.addEventListener('htmx:afterSwap', function(event) {
+    if (event.detail.target.id === 'auth-modal') {
+        const modal = document.getElementById('auth-modal');
+        if (modal && modal.innerHTML.trim() !== '') {
+            // Find the actual modal element inside the container
+            const modalElement = modal.querySelector('.auth-modal');
+            if (modalElement) {
+                modalElement.style.display = 'flex';
+            }
+        }
+    }
+});
+
+// Close modal when clicking outside
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('auth-modal');
+    if (modal && event.target === modal.querySelector('.auth-modal')) {
+        const modalElement = modal.querySelector('.auth-modal');
+        if (modalElement) {
+            modalElement.style.display = 'none';
+        }
+        modal.innerHTML = '';
+    }
+});
+
+// Global function to close auth modal (called from modal buttons)
+function closeAuthModal() {
+    const modal = document.getElementById('auth-modal');
+    if (modal) {
+        const modalElement = modal.querySelector('.auth-modal');
+        if (modalElement) {
+            modalElement.style.display = 'none';
+        }
+        modal.innerHTML = '';
+    }
+}
+
+// Language filtering function
+function filterByLanguage(language) {
+    const currentUrl = new URL(window.location);
+    
+    if (language === '') {
+        // Remove language filter
+        currentUrl.searchParams.delete('language');
+    } else {
+        // Add/update language filter
+        currentUrl.searchParams.set('language', language);
+    }
+    
+    // Navigate to the new URL
+    window.location.href = currentUrl.toString();
+}
+
+// Length filtering function
+function filterByLength(length) {
+    const currentUrl = new URL(window.location);
+    
+    // If we're on the homepage, go to the bitcoin category with the length filter
+    if (currentUrl.pathname === '/') {
+        window.location.href = `/bitcoin?length=${length}`;
+        return;
+    }
+    
+    // Otherwise, add the length filter to the current category
+    currentUrl.searchParams.set('length', length);
+    currentUrl.searchParams.set('page', '1'); // Reset to first page when filtering
+    window.location.href = currentUrl.toString();
+}
+
+// Enhanced Language Filter Initialization
+document.addEventListener('DOMContentLoaded', function() {
+    initializeEnhancedLanguageFilter();
+});
+
+function initializeEnhancedLanguageFilter() {
+    // Language database
+    const LANGUAGES = [
+        { code: 'en', name: 'English', native: 'English', flag: '🇬🇧' },
+        { code: 'es', name: 'Spanish', native: 'Español', flag: '🇪🇸' },
+        { code: 'zh', name: 'Chinese', native: '中文', flag: '🇨🇳' },
+        { code: 'hi', name: 'Hindi', native: 'हिन्दी', flag: '🇮🇳' },
+        { code: 'ar', name: 'Arabic', native: 'العربية', flag: '🇸🇦' },
+        { code: 'pt', name: 'Portuguese', native: 'Português', flag: '🇵🇹' },
+        { code: 'ru', name: 'Russian', native: 'Русский', flag: '🇷🇺' },
+        { code: 'ja', name: 'Japanese', native: '日本語', flag: '🇯🇵' },
+        { code: 'de', name: 'German', native: 'Deutsch', flag: '🇩🇪' },
+        { code: 'fr', name: 'French', native: 'Français', flag: '🇫🇷' },
+        { code: 'it', name: 'Italian', native: 'Italiano', flag: '🇮🇹' },
+        { code: 'ko', name: 'Korean', native: '한국어', flag: '🇰🇷' },
+        { code: 'cs', name: 'Czech', native: 'Čeština', flag: '🇨🇿' },
+        { code: 'pl', name: 'Polish', native: 'Polski', flag: '🇵🇱' },
+        { code: 'nl', name: 'Dutch', native: 'Nederlands', flag: '🇳🇱' },
+        { code: 'sv', name: 'Swedish', native: 'Svenska', flag: '🇸🇪' },
+        { code: 'da', name: 'Danish', native: 'Dansk', flag: '🇩🇰' },
+        { code: 'no', name: 'Norwegian', native: 'Norsk', flag: '🇳🇴' },
+        { code: 'fi', name: 'Finnish', native: 'Suomi', flag: '🇫🇮' },
+        { code: 'hu', name: 'Hungarian', native: 'Magyar', flag: '🇭🇺' },
+        { code: 'ro', name: 'Romanian', native: 'Română', flag: '🇷🇴' },
+        { code: 'bg', name: 'Bulgarian', native: 'Български', flag: '🇧🇬' },
+        { code: 'hr', name: 'Croatian', native: 'Hrvatski', flag: '🇭🇷' },
+        { code: 'sl', name: 'Slovenian', native: 'Slovenščina', flag: '🇸🇮' },
+        { code: 'sk', name: 'Slovak', native: 'Slovenčina', flag: '🇸🇰' },
+        { code: 'et', name: 'Estonian', native: 'Eesti', flag: '🇪🇪' },
+        { code: 'lv', name: 'Latvian', native: 'Latviešu', flag: '🇱🇻' },
+        { code: 'lt', name: 'Lithuanian', native: 'Lietuvių', flag: '🇱🇹' },
+        { code: 'el', name: 'Greek', native: 'Ελληνικά', flag: '🇬🇷' },
+        { code: 'tr', name: 'Turkish', native: 'Türkçe', flag: '🇹🇷' },
+        { code: 'he', name: 'Hebrew', native: 'עברית', flag: '🇮🇱' },
+        { code: 'fa', name: 'Persian', native: 'فارسی', flag: '🇮🇷' },
+        { code: 'th', name: 'Thai', native: 'ไทย', flag: '🇹🇭' },
+        { code: 'vi', name: 'Vietnamese', native: 'Tiếng Việt', flag: '🇻🇳' },
+        { code: 'id', name: 'Indonesian', native: 'Bahasa Indonesia', flag: '🇮🇩' },
+        { code: 'ms', name: 'Malaysian', native: 'Bahasa Malaysia', flag: '🇲🇾' },
+        { code: 'tl', name: 'Filipino', native: 'Filipino', flag: '🇵🇭' },
+        { code: 'sw', name: 'Swahili', native: 'Kiswahili', flag: '🇰🇪' },
+        { code: 'af', name: 'Afrikaans', native: 'Afrikaans', flag: '🇿🇦' }
+    ];
+
+    const searchInput = document.getElementById('language-filter-search');
+    const dropdown = document.getElementById('language-filter-dropdown');
+    const selectedDisplay = document.getElementById('language-filter-selected');
+
+    if (!searchInput || !dropdown || !selectedDisplay) {
+        return; // Elements not found
+    }
+
+    let categoryLanguageUsage = {};
+    let currentHighlight = -1;
+    let filteredLanguages = [];
+
+    // Get available languages from page (basic fallback)
+    const availableLanguages = ['en', 'es', 'zh', 'hi', 'ar', 'pt', 'ru', 'ja', 'de', 'fr', 'it', 'ko', 'cs', 'pl'];
+
+    // Initialize with current selection
+    const currentFilter = searchInput.dataset.selected || '';
+    updateSelectedDisplay(currentFilter);
+
+    // Fetch category-specific language usage
+    async function fetchCategoryLanguageUsage() {
+        try {
+            const response = await fetch('/api/languages/usage');
+            if (response.ok) {
+                const globalUsage = await response.json();
+                categoryLanguageUsage = globalUsage;
+            }
+        } catch (error) {
+            console.warn('Could not fetch language usage data:', error);
+        }
+        renderLanguages('');
+    }
+
+    function updateSelectedDisplay(langCode) {
+        if (!langCode) {
+            selectedDisplay.innerHTML = '<span class="flag">🔍</span><span class="name">{{ t("searchLanguages", currentLang) }}</span>';
+            selectedDisplay.classList.remove('has-selection');
+            searchInput.classList.remove('has-selection');
+            selectedDisplay.style.display = 'flex';
+            return;
+        }
+        
+        selectedDisplay.classList.add('has-selection');
+        searchInput.classList.add('has-selection');
+        selectedDisplay.style.display = 'flex';
+        const lang = LANGUAGES.find(l => l.code === langCode);
+        if (lang) {
+            selectedDisplay.innerHTML = `<span class="flag">${lang.flag}</span><span class="name">${lang.native}</span>`;
+        } else {
+            selectedDisplay.innerHTML = `<span class="flag">🌐</span><span class="name">${langCode}</span>`;
+        }
+    }
+
+    function renderLanguages(searchTerm) {
+        // Filter available languages based on search term
+        filteredLanguages = availableLanguages
+            .map(code => LANGUAGES.find(l => l.code === code) || { code, name: code, native: code, flag: '🌐' })
+            .filter(lang => {
+                const term = searchTerm.toLowerCase();
+                return lang.name.toLowerCase().includes(term) || 
+                       lang.native.toLowerCase().includes(term) ||
+                       lang.code.toLowerCase().includes(term);
+            });
+
+        // Sort languages: most used first, then alphabetically
+        filteredLanguages.sort((a, b) => {
+            const usageA = categoryLanguageUsage[a.code] || 0;
+            const usageB = categoryLanguageUsage[b.code] || 0;
+            
+            if (usageA !== usageB) {
+                return usageB - usageA;
+            }
+            return a.native.localeCompare(b.native);
+        });
+
+        let html = '<div class="language-filter-option language-filter-all-option" data-code=""><span class="flag">🔄</span><span class="name">Show all languages</span></div>';
+        
+        // Group languages by usage
+        const usedLanguages = filteredLanguages.filter(lang => (categoryLanguageUsage[lang.code] || 0) > 0);
+        const unusedLanguages = filteredLanguages.filter(lang => (categoryLanguageUsage[lang.code] || 0) === 0);
+
+        if (usedLanguages.length > 0) {
+            html += '<div class="language-filter-group-header">Used in this category</div>';
+            usedLanguages.forEach((lang) => {
+                const count = categoryLanguageUsage[lang.code] || 0;
+                html += `<div class="language-filter-option" data-code="${lang.code}"><span class="flag">${lang.flag}</span><span class="name">${lang.native}</span><span class="usage-count">${count}</span></div>`;
+            });
+        }
+
+        if (unusedLanguages.length > 0) {
+            html += '<div class="language-filter-group-header">Other available</div>';
+            unusedLanguages.forEach((lang) => {
+                html += `<div class="language-filter-option" data-code="${lang.code}"><span class="flag">${lang.flag}</span><span class="name">${lang.native}</span></div>`;
+            });
+        }
+
+        dropdown.innerHTML = html;
+        currentHighlight = -1;
+
+        // Add click handlers
+        dropdown.querySelectorAll('.language-filter-option').forEach(option => {
+            option.addEventListener('click', function() {
+                const langCode = this.dataset.code;
+                filterByLanguage(langCode);
+                dropdown.classList.remove('show');
+            });
+        });
+    }
+
+    // Event handlers
+    searchInput.addEventListener('input', function() {
+        renderLanguages(this.value);
+        dropdown.classList.add('show');
+    });
+
+    searchInput.addEventListener('focus', function() {
+        renderLanguages(this.value);
+        dropdown.classList.add('show');
+        // Hide selected display while typing
+        selectedDisplay.style.display = 'none';
+    });
+
+    searchInput.addEventListener('blur', function() {
+        // Delay hiding to allow for clicks
+        setTimeout(() => {
+            dropdown.classList.remove('show');
+            // Show selected display again
+            selectedDisplay.style.display = 'flex';
+        }, 150);
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.remove('show');
+            // Show selected display again
+            selectedDisplay.style.display = 'flex';
+        }
+    });
+
+    // Initialize
+    fetchCategoryLanguageUsage();
+}
+</script> 

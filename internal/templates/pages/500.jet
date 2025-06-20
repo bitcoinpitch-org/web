@@ -1,0 +1,15 @@
+{{ extends "../layouts/base.jet" }}
+
+{{ block title() }}Server Error{{ end }}
+
+{{ block description() }}An unexpected error occurred on our server.{{ end }}
+
+{{ block main() }}
+<div class="error-page">
+    <div class="container">
+        <h1>500 - Server Error</h1>
+        <p>Something went wrong on our end. Please try again later.</p>
+        <a href="/" class="button">Return to Home</a>
+    </div>
+</div>
+{{ end }} 

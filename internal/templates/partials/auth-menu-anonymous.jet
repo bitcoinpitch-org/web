@@ -1,0 +1,8 @@
+<div class="auth-links">
+    <a href="/register" class="auth-button secondary">
+        {{ t("ui.auth.register", currentLang) }}
+    </a>
+    <button class="auth-button" hx-get="/auth/login" hx-target="#auth-modal" hx-trigger="click">
+        {{ t("ui.auth.login", currentLang) }}
+    </button>
+</div> 

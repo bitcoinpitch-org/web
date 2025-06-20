@@ -1,0 +1,23 @@
+<div class="votes" id="votes-{{ .ID }}">
+  <button class="up" aria-label="Up-vote" 
+    hx-post="/pitch/{{ .ID }}/vote" 
+    hx-vals='{"type": "up"}' 
+    hx-target="#votes-{{ .ID }}"
+    hx-swap="outerHTML"
+    hx-trigger="click">&#9650;</button>
+  <span class="count up-count">{{ .UpvoteCount }}</span>
+  {{ if gt .Score 0 }}
+  <span class="score positive">{{ .Score }}</span>
+  {{ else if lt .Score 0 }}
+  <span class="score negative">{{ .Score }}</span>
+  {{ else }}
+  <span class="score">{{ .Score }}</span>
+  {{ end }}
+  <button class="down" aria-label="Down-vote" 
+    hx-post="/pitch/{{ .ID }}/vote" 
+    hx-vals='{"type": "down"}' 
+    hx-target="#votes-{{ .ID }}"
+    hx-swap="outerHTML"
+    hx-trigger="click">&#9660;</button>
+  <span class="count down-count">{{ .DownvoteCount }}</span>
+</div> 

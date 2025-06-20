@@ -1,0 +1,96 @@
+<!-- Pitch List Fragment for HTMX Pagination -->
+<div id="{{ Category }}-pitch-list" class="pitch-list">
+{{ range pitches }}
+  {{ include "pitch-card.jet" . }}
+{{ end }}
+
+{{ if len(pitches) == 0 }}
+  <div class="empty-state">
+    <div class="empty-icon">📝</div>
+    <h2>No pitches found</h2>
+    <p>{{ if TagFilter || LengthFilter || AuthorFilter || LanguageFilter }}
+      No pitches match your current filters. Try removing some filters to see more results.
+    {{ else }}
+      Be the first to add a {{ Category }} pitch!
+    {{ end }}</p>
+    <button class="button primary" hx-get="/pitch/form" hx-target="#pitch-form-modal .modal-content">
+      Add Your Pitch
+    </button>
+  </div>
+{{ end }}
+</div>
+
+<!-- Pagination Controls Bottom -->
+{{ if TotalPages > 1 }}
+  <div class="pagination bottom">
+    <div class="pagination-info">
+      <span>Page {{ CurrentPage }} of {{ TotalPages }}</span>
+    </div>
+    
+    <div class="pagination-buttons">
+      {{ if CurrentPage > 1 }}
+        <a href="{{ buildPaginationURL(1, PageSize) }}" 
+           class="page-btn first" 
+           hx-get="{{ buildPaginationURL(1, PageSize) }}" 
+           hx-target="#{{ Category }}-pitch-list" 
+           hx-push-url="true"
+           hx-swap="outerHTML">
+          ⟪ First
+        </a>
+        <a href="{{ buildPaginationURL(CurrentPage - 1, PageSize) }}" 
+           class="page-btn prev" 
+           hx-get="{{ buildPaginationURL(CurrentPage - 1, PageSize) }}" 
+           hx-target="#{{ Category }}-pitch-list" 
+           hx-push-url="true"
+           hx-swap="outerHTML">
+          ⟨ Previous
+        </a>
+      {{ end }}
+      
+      <!-- Page numbers (show 5 around current) -->
+      {{ if CurrentPage > 3 }}
+        <span class="page-ellipsis">…</span>
+      {{ end }}
+      
+      {{ range page := iter(1, TotalPages) }}
+        {{ if page >= max(1, sub(CurrentPage, 2)) && page <= min(TotalPages, add(CurrentPage, 2)) }}
+          {{ if page == CurrentPage }}
+            <span class="page-btn current">{{ page }}</span>
+          {{ else }}
+            <a href="{{ buildPaginationURL(page, PageSize) }}" 
+               class="page-btn" 
+               hx-get="{{ buildPaginationURL(page, PageSize) }}" 
+               hx-target="#{{ Category }}-pitch-list" 
+               hx-push-url="true"
+               hx-swap="outerHTML">
+              {{ page }}
+            </a>
+          {{ end }}
+        {{ end }}
+      {{ end }}
+      
+      {{ if CurrentPage < sub(TotalPages, 2) }}
+        <span class="page-ellipsis">…</span>
+      {{ end }}
+      
+      {{ if CurrentPage < TotalPages }}
+        <a href="{{ buildPaginationURL(CurrentPage + 1, PageSize) }}" 
+           class="page-btn next" 
+           hx-get="{{ buildPaginationURL(CurrentPage + 1, PageSize) }}" 
+           hx-target="#{{ Category }}-pitch-list" 
+           hx-push-url="true"
+           hx-swap="outerHTML">
+          Next ⟩
+        </a>
+        <a href="{{ buildPaginationURL(TotalPages, PageSize) }}" 
+           class="page-btn last" 
+           hx-get="{{ buildPaginationURL(TotalPages, PageSize) }}" 
+           hx-target="#{{ Category }}-pitch-list" 
+           hx-push-url="true"
+           hx-swap="outerHTML">
+          Last ⟫
+        </a>
+      {{ end }}
+    </div>
+  </div>
+{{ end }} 

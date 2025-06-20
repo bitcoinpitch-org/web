@@ -1,0 +1,303 @@
+{{ extends "../../layouts/base.jet" }}
+
+{{ block title() }}
+    {{ t("admin.user_management") }} - {{ t("site.name") }}
+{{ end }}
+
+{{ block main() }}
+<div class="admin-container">
+    <div class="admin-header">
+        <h1>{{ t("admin.user_management") }}</h1>
+        <p class="admin-subtitle">{{ t("admin.manage_users_subtitle") }}</p>
+    </div>
+
+    <div class="admin-content">
+        <!-- User Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>{{ t("admin.total_users") }}</h3>
+                <div class="stat-number">{{ TotalUsers }}</div>
+            </div>
+            <div class="stat-card">
+                <h3>{{ t("admin.admin_users") }}</h3>
+                <div class="stat-number">{{ AdminCount }}</div>
+            </div>
+            <div class="stat-card">
+                <h3>{{ t("admin.moderator_users") }}</h3>
+                <div class="stat-number">{{ ModeratorCount }}</div>
+            </div>
+            <div class="stat-card">
+                <h3>{{ t("admin.regular_users") }}</h3>
+                <div class="stat-number">{{ UserCount }}</div>
+            </div>
+        </div>
+
+        <!-- User Filter -->
+        <div class="user-filters">
+            <form method="GET" action="/admin/users" class="filter-form">
+                <select name="role" onchange="this.form.submit()">
+                    <option value="">{{ t("admin.all_roles") }}</option>
+                    <option value="admin" {{ if RoleFilter == "admin" }}selected{{ end }}>{{ t("admin.admin") }}</option>
+                    <option value="moderator" {{ if RoleFilter == "moderator" }}selected{{ end }}>{{ t("admin.moderator") }}</option>
+                    <option value="user" {{ if RoleFilter == "user" }}selected{{ end }}>{{ t("admin.user") }}</option>
+                </select>
+            </form>
+        </div>
+
+        <!-- Users Table -->
+        <div class="users-table-container">
+            <table class="users-table">
+                <thead>
+                    <tr>
+                        <th>{{ t("admin.user_id") }}</th>
+                        <th>{{ t("admin.email") }}</th>
+                        <th>{{ t("admin.username") }}</th>
+                        <th>{{ t("admin.auth_type") }}</th>
+                        <th>{{ t("admin.role") }}</th>
+                        <th>{{ t("admin.created_at") }}</th>
+                        <th>{{ t("admin.actions") }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{ range Users }}
+                        <tr>
+                            <td class="user-id">{{ .ID }}</td>
+                            <td class="user-email">{{ .Email }}</td>
+                            <td class="user-username">{{ if .Username }}{{ .Username }}{{ else }}<em>{{ t("admin.no_username") }}</em>{{ end }}</td>
+                            <td class="user-auth-type">
+                                <span class="auth-badge auth-{{ .AuthType }}">{{ .AuthType }}</span>
+                            </td>
+                            <td class="user-role">
+                                <span class="role-badge role-{{ .Role }}">{{ .Role }}</span>
+                            </td>
+                            <td class="user-created">{{ formatDate(.CreatedAt, "2006-01-02 15:04") }}</td>
+                            <td class="user-actions">
+                                {{ if .ID != CurrentUser.ID }}
+                                    <form method="POST" action="/admin/users/{{ .ID }}/role" style="display: inline;">
+                                        <input type="hidden" name="_token" value="{{ CsrfToken }}">
+                                        <select name="role" onchange="this.form.submit()" class="role-select">
+                                            <option value="user" {{ if .Role == "user" }}selected{{ end }}>{{ t("admin.user") }}</option>
+                                            <option value="moderator" {{ if .Role == "moderator" }}selected{{ end }}>{{ t("admin.moderator") }}</option>
+                                            <option value="admin" {{ if .Role == "admin" }}selected{{ end }}>{{ t("admin.admin") }}</option>
+                                        </select>
+                                    </form>
+                                {{ else }}
+                                    <span class="current-user">{{ t("admin.current_user") }}</span>
+                                {{ end }}
+                            </td>
+                        </tr>
+                    {{ end }}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {{ if TotalPages > 1 }}
+            <div class="pagination">
+                {{ if CurrentPage > 1 }}
+                    <a href="/admin/users?page={{ CurrentPage - 1 }}{{ if RoleFilter }}&role={{ RoleFilter }}{{ end }}" class="page-link">{{ t("admin.previous") }}</a>
+                {{ end }}
+                
+                <span class="page-info">{{ t("admin.page") }} {{ CurrentPage }} {{ t("admin.of") }} {{ TotalPages }}</span>
+                
+                {{ if CurrentPage < TotalPages }}
+                    <a href="/admin/users?page={{ CurrentPage + 1 }}{{ if RoleFilter }}&role={{ RoleFilter }}{{ end }}" class="page-link">{{ t("admin.next") }}</a>
+                {{ end }}
+            </div>
+        {{ end }}
+    </div>
+</div>
+
+<style>
+.admin-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.admin-header {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.admin-header h1 {
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+}
+
+.admin-subtitle {
+    color: #6b7280;
+    margin: 0;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card h3 {
+    margin: 0 0 0.5rem 0;
+    color: #374151;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #f97316;
+}
+
+.user-filters {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.filter-form select {
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    background: white;
+}
+
+.users-table-container {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow-x: auto;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.users-table th,
+.users-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.users-table th {
+    background: #f9fafb;
+    font-weight: 500;
+    color: #374151;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.users-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+.user-id {
+    font-family: monospace;
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.auth-badge,
+.role-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.auth-trezor { background: #fef3c7; color: #92400e; }
+.auth-nostr { background: #ddd6fe; color: #7c3aed; }
+.auth-twitter { background: #dbeafe; color: #1d4ed8; }
+.auth-email { background: #d1fae5; color: #065f46; }
+.auth-password { background: #fee2e2; color: #dc2626; }
+
+.role-admin { background: #fef3c7; color: #92400e; }
+.role-moderator { background: #dbeafe; color: #1d4ed8; }
+.role-user { background: #f3f4f6; color: #374151; }
+
+.role-select {
+    padding: 0.25rem;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 0.75rem;
+}
+
+.current-user {
+    font-style: italic;
+    color: #6b7280;
+    font-size: 0.75rem;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding: 1rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.page-link {
+    padding: 0.5rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    text-decoration: none;
+    color: #374151;
+    background: white;
+    transition: all 0.2s;
+}
+
+.page-link:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.page-info {
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+    .admin-container {
+        padding: 1rem;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .users-table {
+        font-size: 0.875rem;
+    }
+    
+    .user-id {
+        display: none;
+    }
+}
+</style>
+{{ end }} 

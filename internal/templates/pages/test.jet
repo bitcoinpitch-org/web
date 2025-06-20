@@ -1,0 +1,50 @@
+{{ extends "../layouts/base.jet" }}
+
+{{ block title() }}Template Test{{ end }}
+
+{{ block description() }}A test page to verify all template components.{{ end }}
+
+{{ block main() }}
+<div class="container">
+    <h1>Template Test Page</h1>
+    
+    <section class="test-section">
+        <h2>Flash Messages</h2>
+        <div class="flash-message flash-success">
+            This is a success message
+        </div>
+        <div class="flash-message flash-error">
+            This is an error message
+        </div>
+    </section>
+
+    <section class="test-section">
+        <h2>Buttons</h2>
+        <a href="#" class="button">Primary Button</a>
+    </section>
+
+    <section class="test-section">
+        <h2>Navigation</h2>
+        <p>Check the header for navigation links and the footer for footer links.</p>
+    </section>
+
+    <section class="test-section">
+        <h2>Modal</h2>
+        <button class="button" hx-get="/auth/login" hx-target="#auth-modal">
+            Open Auth Modal
+        </button>
+    </section>
+</div>
+{{ end }}
+
+{{ block scripts() }}
+<script src="/static/js/main.js" defer></script>
+<script src="/static/js/tutorial-i18n.js" defer onerror="console.error('Tutorial i18n script failed to load')"></script>
+<script src="/static/js/tutorial.js" defer onerror="console.error('Tutorial script failed to load')"></script>
+<script>
+    // Add any test-specific JavaScript here
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Template test page loaded');
+    });
+</script>
+{{ end }} 

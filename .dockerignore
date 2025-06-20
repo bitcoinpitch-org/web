@@ -1,0 +1,10 @@
+volumes/
+*.log
+.git/
+.gitignore
+*.md
+*.mdc
+DEBUG*
+testdb.go
+cookies.txt
+drafts/ 

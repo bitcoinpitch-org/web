@@ -1,0 +1,290 @@
+{{ block modal() }}
+<div class="modal auth-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Login to BitcoinPitch.org</h2>
+      <button class="modal-close" onclick="closeAuthModal()">&times;</button>
+    </div>
+    
+    <div class="auth-methods">
+      <!-- Trezor Authentication - DISABLED due to CORP/script loading issues -->
+      <!-- TODO: Re-enable when proper npm package integration is implemented -->
+      <!--
+      <div class="auth-method">
+        <button class="auth-button trezor" onclick="loginWithTrezor()">
+          <div class="auth-icon">🔐</div>
+          <div class="auth-text">
+            <strong>Trezor Hardware Wallet</strong>
+            <small>Sign with your Trezor device</small>
+          </div>
+        </button>
+      </div>
+      -->
+
+      <!-- Nostr Authentication -->
+      <div class="auth-method">
+        <button class="auth-button nostr" onclick="loginWithNostr()">
+          <div class="auth-icon">🟣</div>
+          <div class="auth-text">
+            <strong>Nostr</strong>
+            <small>Sign with your Nostr key</small>
+          </div>
+        </button>
+      </div>
+
+      <!-- Twitter OAuth - DISABLED -->
+      <!--
+      <div class="auth-method">
+        <a href="/auth/twitter" class="auth-button twitter">
+          <div class="auth-icon">🐦</div>
+          <div class="auth-text">
+            <strong>Twitter / X</strong>
+            <small>Sign in with Twitter</small>
+          </div>
+        </a>
+      </div>
+      -->
+
+      <!-- Password Authentication Method -->
+      <div class="auth-method password-method" style="display: none;" id="password-auth">
+        <form class="auth-form" hx-post="/auth/password" hx-target="#auth-result" onsubmit="handlePasswordAuth(event)">
+          {{ if isset(CsrfToken) }}
+          <input type="hidden" name="_token" value="{{ CsrfToken }}">
+          {{ end }}
+          
+          <div class="form-group">
+            <label for="username">Email Address</label>
+            <input type="email" id="username" name="username" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required>
+          </div>
+
+          <!-- 2FA field (hidden by default) -->
+          <div class="form-group" id="totp-field" style="display: none;">
+            <label for="totp_code">Two-Factor Authentication Code</label>
+            <input type="text" id="totp_code" name="totp_code" placeholder="123456" maxlength="6">
+            <small>Enter the 6-digit code from your authenticator app or use a backup code.</small>
+          </div>
+          
+          <button type="submit" class="auth-button password">
+            <span class="auth-text">Sign In</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- Show password option -->
+      <div class="auth-divider">
+        <span>or</span>
+      </div>
+      
+      <button class="auth-toggle" onclick="togglePasswordAuth()">
+        Sign in with username/password
+      </button>
+    </div>
+
+    <div id="auth-result" class="auth-result"></div>
+    
+    <div class="auth-footer">
+      <p><small>By signing in, you agree to our terms of service and privacy policy.</small></p>
+    </div>
+  </div>
+</div>
+
+<script>
+function closeAuthModal() {
+  document.querySelector('.auth-modal').style.display = 'none';
+}
+
+function togglePasswordAuth() {
+  const passwordAuth = document.getElementById('password-auth');
+  const toggle = document.querySelector('.auth-toggle');
+  
+  if (passwordAuth.style.display === 'none') {
+    passwordAuth.style.display = 'block';
+    toggle.textContent = 'Hide email/password option';
+  } else {
+    passwordAuth.style.display = 'none';
+    toggle.textContent = 'Sign in with email/password';
+  }
+}
+
+function handlePasswordAuth(event) {
+  // Don't prevent default - let HTMX handle the submission
+  return true;
+}
+
+// Handle HTMX response for 2FA requirements
+document.addEventListener('htmx:afterRequest', function(event) {
+  if (event.target.matches('form[hx-post="/auth/password"]')) {
+    try {
+      const response = JSON.parse(event.detail.xhr.responseText);
+      
+      if (response.requires_2fa) {
+        // Show 2FA field and prompt for code
+        const totpField = document.getElementById('totp-field');
+        const totpInput = document.getElementById('totp_code');
+        const authResult = document.getElementById('auth-result');
+        
+        totpField.style.display = 'block';
+        totpInput.required = true;
+        totpInput.focus();
+        
+        authResult.innerHTML = '<div class="auth-info">Please enter your two-factor authentication code.</div>';
+        
+        // Clear any previous form validation and set up new validation
+        const form = event.target;
+        // Remove any existing submit listeners to prevent duplication
+        const newForm = form.cloneNode(true);
+        form.parentNode.replaceChild(newForm, form);
+        
+        // Add new submit validation for 2FA
+        newForm.addEventListener('submit', function(e) {
+          const currentTotpInput = document.getElementById('totp_code');
+          if (!currentTotpInput.value.trim()) {
+            e.preventDefault();
+            document.getElementById('auth-result').innerHTML = '<div class="auth-error">Two-factor authentication code is required.</div>';
+          }
+        });
+        
+        // Re-initialize HTMX on the new form
+        if (typeof htmx !== 'undefined') {
+          htmx.process(newForm);
+        }
+        
+      } else if (response.message === "Authentication successful") {
+        // Successful login
+        document.getElementById('auth-result').innerHTML = '<div class="auth-success">Authentication successful! Redirecting...</div>';
+        setTimeout(() => window.location.reload(), 1000);
+      } else if (response.error) {
+        // Show error message
+        document.getElementById('auth-result').innerHTML = '<div class="auth-error">' + response.error + '</div>';
+      }
+    } catch (e) {
+      // Response is not JSON (might be HTML from HTMX), let HTMX handle it
+      console.log('Non-JSON response, letting HTMX handle it');
+    }
+  }
+});
+
+// DISABLED: Trezor authentication due to CORP/script loading issues
+// TODO: Re-enable when proper npm package integration is implemented
+/*
+async function loginWithTrezor() {
+  try {
+    // Check if Trezor Connect is available
+    if (typeof TrezorConnect === 'undefined') {
+      throw new Error('Trezor Connect not loaded. Please install Trezor Bridge.');
+    }
+
+    const message = "BitcoinPitch Authentication: " + Date.now();
+    
+    const result = await TrezorConnect.signMessage({
+      path: "m/84'/0'/0'/0/0", // Standard Bitcoin path
+      message: message,
+    });
+
+    if (result.success) {
+      // Send signature to backend for verification
+      const response = await fetch('/auth/trezor', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': document.querySelector('input[name="_csrf"]')?.value || ''
+        },
+        body: JSON.stringify({
+          message: message,
+          signature: result.payload.signature,
+          address: result.payload.address
+        })
+      });
+
+      if (response.ok) {
+        window.location.reload();
+      } else {
+        const error = await response.json();
+        showAuthError(error.error || 'Trezor authentication failed');
+      }
+    } else {
+      showAuthError(result.payload.error || 'Trezor signing cancelled');
+    }
+  } catch (error) {
+    showAuthError('Trezor authentication error: ' + error.message);
+  }
+}
+*/
+
+async function loginWithNostr() {
+  try {
+    // Check if Nostr extension is available
+    if (!window.nostr) {
+      throw new Error('Nostr extension not found. Please install a Nostr browser extension like Alby or nos2x.');
+    }
+
+    const pubkey = await window.nostr.getPublicKey();
+    const message = "BitcoinPitch Authentication: " + Date.now();
+    
+    const event = {
+      kind: 1,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [],
+      content: message,
+      pubkey: pubkey
+    };
+
+    const signedEvent = await window.nostr.signEvent(event);
+
+    // Send signed event to backend for verification
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    const response = await fetch('/auth/nostr', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken
+      },
+      body: JSON.stringify({
+        event: signedEvent,
+        message: message
+      })
+    });
+
+    if (response.ok) {
+      window.location.reload();
+    } else {
+      const error = await response.json();
+      showAuthError(error.error || 'Nostr authentication failed');
+    }
+  } catch (error) {
+    showAuthError('Nostr authentication error: ' + error.message);
+  }
+}
+
+function showAuthError(message) {
+  const result = document.getElementById('auth-result');
+  result.innerHTML = '<div class="auth-error">' + message + '</div>';
+}
+
+// Handle HTMX responses
+document.body.addEventListener('htmx:afterRequest', function(evt) {
+  if (evt.detail.target.id === 'auth-result') {
+    if (evt.detail.xhr.status === 200) {
+      try {
+        const response = JSON.parse(evt.detail.xhr.responseText);
+        // Only reload on successful authentication, not on 2FA requirement
+        if (response.message === "Authentication successful" || 
+            (response.success && !response.requires_2fa)) {
+          // Successful authentication, reload page
+          window.location.reload();
+        }
+        // If requires_2fa is true, let the other handler deal with it
+      } catch (e) {
+        // Response is not JSON (might be HTML), assume success and reload
+        window.location.reload();
+      }
+    }
+  }
+});
+</script>
+{{ end }} 

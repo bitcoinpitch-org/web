@@ -1,0 +1,1 @@
+ALTER TABLE pitches DROP COLUMN IF EXISTS score; 

@@ -1,0 +1,411 @@
+{{ extends "../../layouts/base.jet" }}
+
+{{ block title() }}{{ t("admin.configuration") }}{{ end }}
+
+{{ block main() }}
+<div class="admin-dashboard">
+    <div class="admin-header">
+        <h1>{{ t("admin.configuration") }}</h1>
+        <nav class="admin-nav">
+            <a href="/admin" class="admin-nav-link">{{ t("admin.dashboard") }}</a>
+            <a href="/admin/config" class="admin-nav-link active">{{ t("admin.configuration") }}</a>
+            <a href="/admin/users" class="admin-nav-link">{{ t("admin.users") }}</a>
+            <a href="/admin/audit-logs" class="admin-nav-link">{{ t("admin.audit_logs") }}</a>
+        </nav>
+    </div>
+
+    <div class="config-container">
+        <!-- Category Navigation -->
+        <div class="config-sidebar">
+            <h3>{{ t("admin.categories") }}</h3>
+            <nav class="category-nav">
+                {{ range Categories }}
+                    <a href="/admin/config?category={{ .Name }}" 
+                       class="category-link {{ if CurrentCategory == .Name }}active{{ end }}">
+                        <span class="category-name">{{ .DisplayName }}</span>
+                        <span class="category-desc">{{ .Description }}</span>
+                    </a>
+                {{ end }}
+            </nav>
+        </div>
+
+        <!-- Configuration Form -->
+        <div class="config-main">
+            <div class="config-header">
+                {{ range Categories }}
+                    {{ if CurrentCategory == .Name }}
+                        <h2>{{ .DisplayName }}</h2>
+                        <p class="category-description">{{ .Description }}</p>
+                    {{ end }}
+                {{ end }}
+            </div>
+
+            {{ if len(Settings) > 0 }}
+                <form method="POST" action="/admin/config/update" class="config-form">
+                    <input type="hidden" name="_token" value="{{ CsrfToken }}">
+                    <input type="hidden" name="category" value="{{ CurrentCategory }}">
+
+                    <div class="settings-grid">
+                        {{ range Settings }}
+                            <div class="setting-item">
+                                <label for="config_{{ .Key }}" class="setting-label">
+                                    {{ .Key }}
+                                </label>
+                                {{ if .Description }}
+                                    <p class="setting-description">{{ .Description }}</p>
+                                {{ end }}
+
+                                {{ if .DataType == "boolean" }}
+                                    <select name="config_{{ .Key }}" id="config_{{ .Key }}" class="setting-input">
+                                        <option value="true" {{ if .Value == "true" }}selected{{ end }}>
+                                            {{ t("admin.enabled") }}
+                                        </option>
+                                        <option value="false" {{ if .Value == "false" }}selected{{ end }}>
+                                            {{ t("admin.disabled") }}
+                                        </option>
+                                    </select>
+                                {{ else if .DataType == "integer" }}
+                                    <input type="number" 
+                                           name="config_{{ .Key }}" 
+                                           id="config_{{ .Key }}"
+                                           value="{{ .Value }}" 
+                                           class="setting-input"
+                                           min="0">
+                                {{ else if .DataType == "json" }}
+                                    <textarea name="config_{{ .Key }}" 
+                                              id="config_{{ .Key }}"
+                                              class="setting-input setting-textarea"
+                                              rows="4">{{ .Value }}</textarea>
+                                    <small class="setting-hint">{{ t("admin.json_format_hint") }}</small>
+                                {{ else }}
+                                    <input type="text" 
+                                           name="config_{{ .Key }}" 
+                                           id="config_{{ .Key }}"
+                                           value="{{ .Value }}" 
+                                           class="setting-input">
+                                {{ end }}
+
+                                <div class="setting-meta">
+                                    <span class="setting-type">{{ t("admin.type") }}: {{ .DataType }}</span>
+                                    {{ if .UpdatedAt }}
+                                        <span class="setting-updated">{{ t("admin.updated") }}: {{ .UpdatedAt.Format("2006-01-02 15:04") }}</span>
+                                    {{ end }}
+                                </div>
+                            </div>
+                        {{ end }}
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            {{ t("admin.save_configuration") }}
+                        </button>
+                        <a href="/admin/config?category={{ CurrentCategory }}" class="btn btn-secondary">
+                            {{ t("admin.cancel") }}
+                        </a>
+                    </div>
+                </form>
+            {{ else }}
+                <div class="no-settings">
+                    <p>{{ t("admin.no_settings_found") }}</p>
+                    <p class="help-text">{{ t("admin.no_settings_help") }}</p>
+                </div>
+            {{ end }}
+
+            <!-- Help Section -->
+            <div class="config-help">
+                <h3>{{ t("admin.configuration_help") }}</h3>
+                <div class="help-content">
+                    {{ if CurrentCategory == "pitch_limits" }}
+                        <p>{{ t("admin.pitch_limits_help") }}</p>
+                        <ul>
+                            <li><strong>{{ t("admin.one_liner") }}:</strong> {{ t("admin.one_liner_help") }}</li>
+                            <li><strong>{{ t("admin.sms") }}:</strong> {{ t("admin.sms_help") }}</li>
+                            <li><strong>{{ t("admin.tweet") }}:</strong> {{ t("admin.tweet_help") }}</li>
+                            <li><strong>{{ t("admin.elevator") }}:</strong> {{ t("admin.elevator_help") }}</li>
+                        </ul>
+                    {{ else if CurrentCategory == "security" }}
+                        <p>{{ t("admin.security_help") }}</p>
+                        <ul>
+                            <li><strong>{{ t("admin.rate_limit") }}:</strong> {{ t("admin.rate_limit_help") }}</li>
+                        </ul>
+                    {{ else if CurrentCategory == "users" }}
+                        <p>{{ t("admin.users_help") }}</p>
+                        <ul>
+                            <li><strong>{{ t("admin.registration") }}:</strong> {{ t("admin.registration_help") }}</li>
+                            <li><strong>{{ t("admin.verification") }}:</strong> {{ t("admin.verification_help") }}</li>
+                        </ul>
+                    {{ else if CurrentCategory == "moderation" }}
+                        <p>{{ t("admin.moderation_help") }}</p>
+                        <ul>
+                            <li><strong>{{ t("admin.auto_approve") }}:</strong> {{ t("admin.auto_approve_help") }}</li>
+                            <li><strong>{{ t("admin.min_score") }}:</strong> {{ t("admin.min_score_help") }}</li>
+                        </ul>
+                    {{ else if CurrentCategory == "site" }}
+                        <p>{{ t("admin.site_help") }}</p>
+                        <ul>
+                            <li><strong>{{ t("admin.maintenance") }}:</strong> {{ t("admin.maintenance_help") }}</li>
+                            <li><strong>{{ t("admin.banner") }}:</strong> {{ t("admin.banner_help") }}</li>
+                        </ul>
+                    {{ else if CurrentCategory == "i18n" }}
+                        <p>{{ t("admin.i18n_help") }}</p>
+                        <ul>
+                            <li><strong>{{ t("admin.default_lang") }}:</strong> {{ t("admin.default_lang_help") }}</li>
+                            <li><strong>{{ t("admin.enabled_langs") }}:</strong> {{ t("admin.enabled_langs_help") }}</li>
+                        </ul>
+                    {{ end }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.config-container {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.config-sidebar {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1.5rem;
+    height: fit-content;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.config-sidebar h3 {
+    margin: 0 0 1rem 0;
+    color: #374151;
+    font-size: 1.125rem;
+}
+
+.category-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.category-link {
+    display: block;
+    padding: 0.75rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    text-decoration: none;
+    color: #374151;
+    transition: all 0.2s;
+}
+
+.category-link:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+}
+
+.category-link.active {
+    background: #f97316;
+    color: white;
+    border-color: #f97316;
+}
+
+.category-name {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.category-desc {
+    display: block;
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+.config-main {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.config-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.config-header h2 {
+    margin: 0 0 0.5rem 0;
+    color: #374151;
+}
+
+.category-description {
+    color: #6b7280;
+    margin: 0;
+}
+
+.settings-grid {
+    display: grid;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.setting-item {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 1.5rem;
+    background: #f9fafb;
+}
+
+.setting-label {
+    display: block;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 0.5rem;
+    font-family: monospace;
+    font-size: 0.9rem;
+}
+
+.setting-description {
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin: 0 0 1rem 0;
+}
+
+.setting-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 1rem;
+    background: white;
+}
+
+.setting-input:focus {
+    outline: none;
+    border-color: #f97316;
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+}
+
+.setting-textarea {
+    min-height: 100px;
+    resize: vertical;
+    font-family: monospace;
+}
+
+.setting-hint {
+    display: block;
+    color: #6b7280;
+    font-size: 0.75rem;
+    margin-top: 0.5rem;
+    font-style: italic;
+}
+
+.setting-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-block;
+    text-align: center;
+}
+
+.btn-primary {
+    background: #f97316;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #ea580c;
+}
+
+.btn-secondary {
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+.btn-secondary:hover {
+    background: #e5e7eb;
+}
+
+.no-settings {
+    text-align: center;
+    padding: 3rem;
+    color: #6b7280;
+}
+
+.help-text {
+    font-size: 0.875rem;
+    margin-top: 1rem;
+}
+
+.config-help {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.config-help h3 {
+    margin: 0 0 1rem 0;
+    color: #374151;
+    font-size: 1.125rem;
+}
+
+.help-content {
+    color: #6b7280;
+    line-height: 1.6;
+}
+
+.help-content ul {
+    margin: 1rem 0;
+    padding-left: 1.5rem;
+}
+
+.help-content li {
+    margin: 0.5rem 0;
+}
+
+@media (max-width: 768px) {
+    .config-container {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .config-main {
+        padding: 1rem;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+    }
+}
+</style>
+{{ end }} 

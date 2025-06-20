@@ -1,0 +1,35 @@
+<div class="language-picker">
+    <button class="language-button" onclick="toggleLanguageDropdown()">
+        <span class="current-language">
+            {{ if currentLang == "en" }}🇬🇧 English{{ else if currentLang == "cs" }}🇨🇿 Čeština{{ else if currentLang == "" }}🇬🇧 English (default){{ else }}[{{ currentLang }}] Unknown{{ end }}
+        </span>
+        <span class="dropdown-arrow">▼</span>
+    </button>
+    
+    <div class="language-dropdown" id="language-dropdown">
+        <a href="/lang/en" class="language-option{{ if currentLang == "en" || currentLang == "" }} active{{ end }}">
+            <span class="flag">🇬🇧</span>
+            <span class="language-name">English</span>
+        </a>
+        <a href="/lang/cs" class="language-option{{ if currentLang == "cs" }} active{{ end }}">
+            <span class="flag">🇨🇿</span>
+            <span class="language-name">Čeština</span>
+        </a>
+    </div>
+</div>
+
+<script>
+function toggleLanguageDropdown() {
+    const dropdown = document.getElementById('language-dropdown');
+    dropdown.classList.toggle('show');
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    const picker = document.querySelector('.language-picker');
+    if (!picker.contains(event.target)) {
+        const dropdown = document.getElementById('language-dropdown');
+        dropdown.classList.remove('show');
+    }
+});
+</script> 

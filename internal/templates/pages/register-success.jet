@@ -1,0 +1,170 @@
+{{ extends "../layouts/base.jet" }}
+
+{{ block title() }}Registration Successful - BitcoinPitch.org{{ end }}
+
+{{ block main() }}
+<div class="container">
+    <div class="success-page">
+        <div class="success-content">
+            <div class="success-icon">✅</div>
+            <h1>{{ t("register.success_title", currentLang) }}</h1>
+            <p>{{ t("register.success_message", currentLang) }}</p>
+            
+            {{ if isset(Email) }}
+            <div class="email-info">
+                <p><strong>{{ t("register.email_sent_to", currentLang) }}:</strong> {{ Email }}</p>
+            </div>
+            {{ end }}
+            
+            {{ if isset(EmailError) }}
+            <div class="flash-message flash-message--warning">
+                {{ EmailError }}
+            </div>
+            {{ end }}
+            
+            <div class="success-actions">
+                <a href="/" class="button primary">
+                    {{ t("register.browse_pitches", currentLang) }}
+                </a>
+                <a href="#" onclick="showAuthModal()" class="button secondary">
+                    {{ t("register.already_verified", currentLang) }}
+                </a>
+            </div>
+            
+            <div class="help-text">
+                <p>{{ t("register.help_text", currentLang) }}</p>
+                <ul>
+                    <li>{{ t("register.help_check_spam", currentLang) }}</li>
+                    <li>{{ t("register.help_wait_time", currentLang) }}</li>
+                    <li>{{ t("register.help_contact_support", currentLang) }}</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.success-page {
+    max-width: 600px;
+    margin: 4rem auto;
+    padding: 2rem;
+    text-align: center;
+}
+
+.success-content {
+    background: var(--color-background);
+    border: 1px solid var(--color-background-secondary);
+    border-radius: var(--border-radius-lg);
+    padding: 3rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.success-icon {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+}
+
+.success-content h1 {
+    color: var(--color-success, #10b981);
+    margin-bottom: 1rem;
+    font-size: 2rem;
+}
+
+.success-content p {
+    color: var(--color-text-secondary);
+    margin-bottom: 2rem;
+    line-height: 1.6;
+    font-size: 1.1rem;
+}
+
+.email-info {
+    background: var(--color-background-secondary);
+    padding: 1rem;
+    border-radius: var(--border-radius-md);
+    margin: 1.5rem 0;
+}
+
+.email-info p {
+    margin: 0;
+    color: var(--color-text);
+    font-size: 1rem;
+}
+
+.success-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+}
+
+.help-text {
+    text-align: left;
+    background: var(--color-background-secondary);
+    padding: 1.5rem;
+    border-radius: var(--border-radius-md);
+    margin-top: 2rem;
+}
+
+.help-text p {
+    margin-bottom: 1rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.help-text ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.help-text li {
+    color: var(--color-text-secondary);
+    margin-bottom: 0.5rem;
+    line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+    .success-page {
+        margin: 2rem 1rem;
+        padding: 1rem;
+    }
+    
+    .success-content {
+        padding: 2rem;
+    }
+    
+    .success-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .success-actions .button {
+        width: 100%;
+        max-width: 250px;
+    }
+}
+</style>
+
+<script>
+function showAuthModal() {
+    // This will show the existing login modal
+    const modal = document.querySelector('.auth-modal');
+    if (modal) {
+        modal.classList.add('active');
+    } else {
+        // If modal doesn't exist, fetch it via HTMX
+        fetch('/auth/login', {
+            headers: {
+                'HX-Request': 'true'
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            document.body.insertAdjacentHTML('beforeend', '<div id="auth-modal">' + html + '</div>');
+            const newModal = document.querySelector('.auth-modal');
+            if (newModal) newModal.classList.add('active');
+        });
+    }
+}
+</script>
+{{ end }} 

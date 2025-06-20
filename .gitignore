@@ -1,0 +1,55 @@
+# Go specific
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+
+# Go workspace
+/vendor/
+/bin/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# IDE specific
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Project specific
+/data/
+/logs/
+/volumes/
+*.log
+*.sqlite
+*.db
+IMPLEMENTATION_PLAN.md
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Build output
+/dist/
+/build/
+
+# Debug files
+debug
+debug.test
+
+# Draft files and directories
+drafts/ volumes/

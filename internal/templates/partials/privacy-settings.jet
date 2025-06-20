@@ -1,0 +1,72 @@
+<div id="privacy-settings-container">
+    {{ if PrivacyUpdateSuccess }}
+    <div class="privacy-success" id="privacy-success-message">
+        <div class="success-icon">✅</div>
+        <span>{{ t("profile.privacy_updated", currentLang) }}</span>
+    </div>
+    {{ end }}
+    
+    <div class="privacy-options">
+        <div class="privacy-option">
+            <input type="checkbox" 
+                   id="show_auth_method" 
+                   name="show_auth_method" 
+                   {{ if User.ShowAuthMethod }}checked{{ end }}
+                   hx-post="/user/privacy"
+                   hx-trigger="change"
+                   hx-target="#privacy-settings-container"
+                   hx-swap="outerHTML"
+                   hx-include="[name='show_username'], [name='show_profile_info']"
+                   hx-indicator="#privacy-loading">
+            <div class="privacy-option-content">
+                <div class="privacy-option-title">{{ t("profile.show_auth_method", currentLang) }}</div>
+                <div class="privacy-option-desc">{{ t("profile.show_auth_method_desc", currentLang) }}</div>
+            </div>
+        </div>
+        
+        <div class="privacy-option">
+            <input type="checkbox" 
+                   id="show_username" 
+                   name="show_username" 
+                   {{ if User.ShowUsername }}checked{{ end }}
+                   hx-post="/user/privacy"
+                   hx-trigger="change"
+                   hx-target="#privacy-settings-container"
+                   hx-swap="outerHTML"
+                   hx-include="[name='show_auth_method'], [name='show_profile_info']"
+                   hx-indicator="#privacy-loading">
+            <div class="privacy-option-content">
+                <div class="privacy-option-title">{{ t("profile.show_username", currentLang) }}</div>
+                <div class="privacy-option-desc">{{ t("profile.show_username_desc", currentLang) }}</div>
+            </div>
+        </div>
+        
+        <div class="privacy-option">
+            <input type="checkbox" 
+                   id="show_profile_info" 
+                   name="show_profile_info" 
+                   {{ if User.ShowProfileInfo }}checked{{ end }}
+                   hx-post="/user/privacy"
+                   hx-trigger="change"
+                   hx-target="#privacy-settings-container"
+                   hx-swap="outerHTML"
+                   hx-include="[name='show_auth_method'], [name='show_username']"
+                   hx-indicator="#privacy-loading">
+            <div class="privacy-option-content">
+                <div class="privacy-option-title">{{ t("profile.show_profile_info", currentLang) }}</div>
+                <div class="privacy-option-desc">{{ t("profile.show_profile_info_desc", currentLang) }}</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading indicator -->
+    <div id="privacy-loading" class="privacy-loading" style="display: none;">
+        <div class="loading-spinner"></div>
+        <span>{{ t("profile.saving_settings", currentLang) }}</span>
+    </div>
+    
+    <!-- Hidden CSRF token -->
+    {{ if CsrfToken }}
+        <input type="hidden" name="_token" value="{{ CsrfToken }}">
+    {{ end }}
+</div> 

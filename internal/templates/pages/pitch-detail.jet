@@ -1,0 +1,105 @@
+{{ extends "../layouts/base.jet" }}
+
+{{ block title() }}{{ Title }}{{ end }}
+
+{{ block description() }}{{ Description }}{{ end }}
+
+{{ block head() }}
+<!-- Open Graph meta tags for social media sharing -->
+<meta property="og:title" content="{{ Title }}">
+<meta property="og:description" content="{{ pitch.Content }}">
+<meta property="og:type" content="article">
+<meta property="og:url" content="{{ request.Scheme }}://{{ request.Host }}/p/{{ pitch.ID }}">
+<meta property="og:site_name" content="BitcoinPitch.org">
+
+<!-- Twitter Card meta tags -->
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="{{ Title }}">
+<meta name="twitter:description" content="{{ pitch.Content }}">
+<meta name="twitter:site" content="@bitcoinpitch">
+{{ end }}
+
+{{ block main() }}
+<div class="container">
+    <!-- Pitch Detail -->
+    <article class="pitch-detail">
+        <div class="pitch-header">
+            <div class="pitch-meta">
+                <span class="pitch-category">{{ pitch.MainCategory }}</span>
+                <span class="pitch-length">{{ pitch.LengthCategory }}</span>
+                <span class="pitch-language">{{ pitch.Language }}</span>
+            </div>
+            <div class="pitch-votes">
+                <button class="vote-btn upvote" aria-label="Upvote">▲</button>
+                <span class="vote-count">{{ pitch.VoteCount }}</span>
+                <button class="vote-btn downvote" aria-label="Downvote">▼</button>
+            </div>
+        </div>
+
+        <div class="pitch-content">
+            <p>{{ pitch.Content }}</p>
+        </div>
+
+        <div class="pitch-tags">
+            {{ range pitch.Tags }}
+            <a href="/tag/{{ .Name }}" class="tag">{{ .Name }}</a>
+            {{ end }}
+        </div>
+
+        <div class="pitch-author">
+            <p class="author-info">
+                {{ if pitch.AuthorType == "same" }}
+                Posted by {{ if pitch.PostedByDisplayName }}{{ pitch.PostedByDisplayName }}{{ else }}Anonymous{{ end }}
+                {{ else if pitch.AuthorType == "unknown" }}
+                Posted by {{ if pitch.PostedByDisplayName }}{{ pitch.PostedByDisplayName }}{{ else }}Anonymous{{ end }} • Author: Unknown
+                {{ else if pitch.AuthorType == "custom" }}
+                Posted by {{ if pitch.PostedByDisplayName }}{{ pitch.PostedByDisplayName }}{{ else }}Anonymous{{ end }} • Author: {{ pitch.AuthorName }}
+                {{ else if pitch.AuthorType == "twitter" }}
+                Posted by {{ if pitch.PostedByDisplayName }}{{ pitch.PostedByDisplayName }}{{ else }}Anonymous{{ end }} • Author: <a href="https://twitter.com/{{ pitch.GetAuthorHandleForTwitter() }}" target="_blank" rel="noopener">{{ pitch.GetAuthorHandle() }}</a>
+                {{ else if pitch.AuthorType == "nostr" }}
+                Posted by {{ if pitch.PostedByDisplayName }}{{ pitch.PostedByDisplayName }}{{ else }}Anonymous{{ end }} • Author: <a href="https://nostr.com/{{ pitch.GetAuthorHandle() }}" target="_blank" rel="noopener">{{ pitch.GetAuthorHandle() }}</a>
+                {{ end }}
+            </p>
+            <time datetime="{{ pitch.CreatedAt }}">{{ pitch.CreatedAt }}</time>
+        </div>
+
+        <!-- Share Options -->
+        <div class="share-options">
+            <h3>Share this pitch</h3>
+            <div class="share-buttons">
+                <button class="share-btn twitter" data-platform="twitter" data-pitch-id="{{ pitch.ID }}" aria-label="Share on Twitter">
+                    <span class="icon">𝕏</span>
+                    <span class="label">Twitter</span>
+                </button>
+                <button class="share-btn nostr" data-platform="nostr" data-pitch-id="{{ pitch.ID }}" aria-label="Share on Nostr">
+                    <span class="icon">N</span>
+                    <span class="label">Nostr</span>
+                </button>
+                <button class="share-btn facebook" data-platform="facebook" data-pitch-id="{{ pitch.ID }}" aria-label="Share on Facebook">
+                    <span class="icon">f</span>
+                    <span class="label">Facebook</span>
+                </button>
+                <button class="share-btn copy" data-platform="copy" data-pitch-id="{{ pitch.ID }}" aria-label="Copy to clipboard">
+                    <span class="icon">📋</span>
+                    <span class="label">Copy</span>
+                </button>
+            </div>
+            <div class="share-options-toggle">
+                <label>
+                    <input type="checkbox" id="include-attribution" checked>
+                    Include "bitcoinpitch.org" attribution
+                </label>
+            </div>
+        </div>
+    </article>
+</div>
+{{ end }}
+
+{{ block scripts() }}
+<script src="/static/js/main.js" defer></script>
+<script src="/static/js/tutorial-i18n.js" defer onerror="console.error('Tutorial i18n script failed to load')"></script>
+<script src="/static/js/tutorial.js" defer onerror="console.error('Tutorial script failed to load')"></script>
+<script>
+// Sharing will be handled by main.js initShareButtons
+</script>
+{{ end }} 

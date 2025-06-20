@@ -1,0 +1,424 @@
+{{ extends "../../layouts/base.jet" }}
+
+{{ block title() }}
+    {{ t("admin.audit_logs") }} - {{ t("site.name") }}
+{{ end }}
+
+{{ block main() }}
+<div class="admin-container">
+    <div class="admin-header">
+        <h1>{{ t("admin.audit_logs") }}</h1>
+        <p class="admin-subtitle">{{ t("admin.audit_logs_subtitle") }}</p>
+    </div>
+
+    <div class="admin-content">
+        {{ if AuditLogs && len(AuditLogs) > 0 }}
+            <!-- Audit Logs Table -->
+            <div class="logs-table-container">
+                <table class="logs-table">
+                    <thead>
+                        <tr>
+                            <th>{{ t("admin.timestamp") }}</th>
+                            <th>{{ t("admin.user") }}</th>
+                            <th>{{ t("admin.setting_key") }}</th>
+                            <th>{{ t("admin.old_value") }}</th>
+                            <th>{{ t("admin.new_value") }}</th>
+                            <th>{{ t("admin.change_type") }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{ range AuditLogs }}
+                            <tr>
+                                <td class="log-timestamp">
+                                    <div class="timestamp-main">{{ formatDate(.CreatedAt, "2006-01-02") }}</div>
+                                    <div class="timestamp-time">{{ formatDate(.CreatedAt, "15:04:05") }}</div>
+                                </td>
+                                <td class="log-user">
+                                    {{ if .ChangedByEmail }}
+                                        <div class="user-info">
+                                            <div class="user-email">{{ .ChangedByEmail }}</div>
+                                            {{ if .ChangedByUsername }}
+                                                <div class="user-username">@{{ .ChangedByUsername }}</div>
+                                            {{ end }}
+                                        </div>
+                                    {{ else }}
+                                        <em class="no-user">{{ t("admin.system") }}</em>
+                                    {{ end }}
+                                </td>
+                                <td class="log-key">
+                                    <code class="config-key">{{ .ConfigKey }}</code>
+                                </td>
+                                <td class="log-old-value">
+                                    {{ if .OldValue }}
+                                        <div class="value-container">
+                                            <code class="config-value old-value">{{ .OldValue }}</code>
+                                        </div>
+                                    {{ else }}
+                                        <em class="no-value">{{ t("admin.no_value") }}</em>
+                                    {{ end }}
+                                </td>
+                                <td class="log-new-value">
+                                    {{ if .NewValue }}
+                                        <div class="value-container">
+                                            <code class="config-value new-value">{{ .NewValue }}</code>
+                                        </div>
+                                    {{ else }}
+                                        <em class="no-value">{{ t("admin.no_value") }}</em>
+                                    {{ end }}
+                                </td>
+                                <td class="log-action">
+                                    {{ if .OldValue && .NewValue }}
+                                        <span class="action-badge action-update">{{ t("admin.updated") }}</span>
+                                    {{ else if .NewValue }}
+                                        <span class="action-badge action-create">{{ t("admin.created") }}</span>
+                                    {{ else }}
+                                        <span class="action-badge action-delete">{{ t("admin.deleted") }}</span>
+                                    {{ end }}
+                                </td>
+                            </tr>
+                        {{ end }}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {{ if TotalPages > 1 }}
+                <div class="pagination">
+                    {{ if CurrentPage > 1 }}
+                        <a href="/admin/audit-logs?page={{ CurrentPage - 1 }}" class="page-link">{{ t("admin.previous") }}</a>
+                    {{ end }}
+                    
+                    <span class="page-info">{{ t("admin.page") }} {{ CurrentPage }} {{ t("admin.of") }} {{ TotalPages }}</span>
+                    
+                    {{ if CurrentPage < TotalPages }}
+                        <a href="/admin/audit-logs?page={{ CurrentPage + 1 }}" class="page-link">{{ t("admin.next") }}</a>
+                    {{ end }}
+                </div>
+            {{ end }}
+        {{ else }}
+            <!-- No Logs -->
+            <div class="no-logs">
+                <div class="no-logs-icon">📋</div>
+                <h3>{{ t("admin.no_audit_logs") }}</h3>
+                <p>{{ t("admin.no_audit_logs_description") }}</p>
+                <p class="help-text">{{ t("admin.audit_logs_help") }}</p>
+            </div>
+        {{ end }}
+
+        <!-- Help Section -->
+        <div class="audit-help">
+            <h3>{{ t("admin.about_audit_logs") }}</h3>
+            <div class="help-content">
+                <p>{{ t("admin.audit_logs_explanation") }}</p>
+                <ul>
+                    <li>{{ t("admin.audit_logs_point_1") }}</li>
+                    <li>{{ t("admin.audit_logs_point_2") }}</li>
+                    <li>{{ t("admin.audit_logs_point_3") }}</li>
+                    <li>{{ t("admin.audit_logs_point_4") }}</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.admin-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.admin-header {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.admin-header h1 {
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+}
+
+.admin-subtitle {
+    color: #6b7280;
+    margin: 0;
+}
+
+.logs-table-container {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow-x: auto;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.logs-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 800px;
+}
+
+.logs-table th,
+.logs-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: top;
+}
+
+.logs-table th {
+    background: #f9fafb;
+    font-weight: 500;
+    color: #374151;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    position: sticky;
+    top: 0;
+}
+
+.logs-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+.log-timestamp {
+    min-width: 120px;
+}
+
+.timestamp-main {
+    font-weight: 500;
+    color: #374151;
+}
+
+.timestamp-time {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-family: monospace;
+}
+
+.log-user {
+    min-width: 150px;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+.user-email {
+    font-weight: 500;
+    color: #374151;
+    font-size: 0.875rem;
+}
+
+.user-username {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.no-user {
+    color: #9ca3af;
+    font-style: italic;
+}
+
+.log-key {
+    min-width: 150px;
+}
+
+.config-key {
+    background: #f3f4f6;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.75rem;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+}
+
+.log-old-value,
+.log-new-value {
+    min-width: 120px;
+    max-width: 200px;
+}
+
+.value-container {
+    word-break: break-word;
+}
+
+.config-value {
+    display: block;
+    background: #f9fafb;
+    padding: 0.5rem;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.75rem;
+    border: 1px solid #e5e7eb;
+    max-height: 100px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+}
+
+.old-value {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #991b1b;
+}
+
+.new-value {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #166534;
+}
+
+.no-value {
+    color: #9ca3af;
+    font-style: italic;
+    font-size: 0.875rem;
+}
+
+.log-action {
+    min-width: 100px;
+}
+
+.action-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.action-create {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.action-update {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.action-delete {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.no-logs {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.no-logs-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.no-logs h3 {
+    color: #374151;
+    margin-bottom: 0.5rem;
+}
+
+.no-logs p {
+    color: #6b7280;
+    margin-bottom: 0.5rem;
+}
+
+.help-text {
+    font-size: 0.875rem;
+    font-style: italic;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.page-link {
+    padding: 0.5rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    text-decoration: none;
+    color: #374151;
+    background: white;
+    transition: all 0.2s;
+}
+
+.page-link:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.page-info {
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.audit-help {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.audit-help h3 {
+    color: #374151;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 0.5rem;
+}
+
+.help-content {
+    color: #6b7280;
+    line-height: 1.6;
+}
+
+.help-content ul {
+    margin: 1rem 0;
+    padding-left: 1.5rem;
+}
+
+.help-content li {
+    margin-bottom: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .admin-container {
+        padding: 1rem;
+    }
+    
+    .logs-table-container {
+        overflow-x: scroll;
+    }
+    
+    .logs-table {
+        font-size: 0.875rem;
+    }
+    
+    .logs-table th,
+    .logs-table td {
+        padding: 0.5rem;
+    }
+    
+    .pagination {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+</style>
+{{ end }} 

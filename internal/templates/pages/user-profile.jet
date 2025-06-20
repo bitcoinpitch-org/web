@@ -1,0 +1,527 @@
+{{ extends "../layouts/base.jet" }}
+
+{{ block title() }}{{ Title }}{{ end }}
+
+{{ block description() }}User profile and account settings{{ end }}
+
+{{ block main() }}
+<div class="container">
+    <div class="user-profile">
+        <h1>{{ t("profile.title", currentLang) }}</h1>
+        
+        <!-- Profile Header with Avatar and Stats -->
+        <div class="profile-header">
+            <div class="profile-avatar-section">
+                <div class="profile-avatar">
+                    {{ if len(UserDisplayName) > 0 }}
+                        {{ UserDisplayName[:1] }}
+                    {{ else }}
+                        {{ if User }}{{ User.AuthType[:1] }}{{ else }}?{{ end }}
+                    {{ end }}
+                </div>
+                <div class="profile-header-info">
+                    <h2>{{ if len(UserDisplayName) > 0 }}{{ UserDisplayName }}{{ else }}Anonymous User{{ end }}</h2>
+                    <div class="profile-meta">
+                        {{ if User }}
+                            {{ t("profile.member_since", currentLang) }} {{ User.CreatedAt.Format("January 2006") }}
+                            {{ if User.ShowAuthMethod }} • {{ t("auth.type." + User.AuthType, currentLang) }}{{ end }}
+                        {{ end }}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Profile Stats -->
+            <div class="profile-stats">
+                <div class="profile-stat">
+                    <span class="profile-stat-value">{{ PitchCount }}</span>
+                    <span class="profile-stat-label">{{ t("profile.stats.pitches", currentLang) }}</span>
+                </div>
+                <div class="profile-stat">
+                    <span class="profile-stat-value">{{ VoteCount }}</span>
+                    <span class="profile-stat-label">{{ t("profile.stats.votes", currentLang) }}</span>
+                </div>
+                <div class="profile-stat">
+                    <span class="profile-stat-value">{{ TotalScore }}</span>
+                    <span class="profile-stat-label">{{ t("profile.stats.score", currentLang) }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Information Section -->
+        {{ if User }}
+        <div class="profile-section">
+            <h2>{{ t("profile.account_info", currentLang) }}</h2>
+            <div class="profile-info">
+                <div class="profile-info-item">
+                    <strong>{{ t("profile.display_name", currentLang) }}:</strong>
+                    <span>{{ UserDisplayName || t("profile.not_set", currentLang) }}</span>
+                </div>
+                <div class="profile-info-item">
+                    <strong>{{ t("profile.user_id", currentLang) }}:</strong>
+                    <span>{{ User.ID }}</span>
+                </div>
+                <div class="profile-info-item">
+                    <strong>{{ t("profile.auth_type", currentLang) }}:</strong>
+                    <span>{{ t("auth.type." + User.AuthType, currentLang) }}</span>
+                </div>
+                <div class="profile-info-item">
+                    <strong>{{ t("profile.created_at", currentLang) }}:</strong>
+                    <span>{{ User.CreatedAt.Format("January 2, 2006 at 15:04") }}</span>
+                </div>
+            </div>
+        </div>
+        {{ else }}
+        <div class="profile-section">
+            <h2>{{ t("profile.account_info", currentLang) }}</h2>
+            <p>{{ t("profile.no_user_info", currentLang) }}</p>
+        </div>
+        {{ end }}
+
+        <!-- Edit Display Name Section -->
+        <div class="profile-section">
+            <h2>{{ t("profile.edit_display_name", currentLang) }}</h2>
+            <form method="POST" action="/user/display-name" class="profile-form">
+                {{ if CsrfToken }}
+                    <input type="hidden" name="_token" value="{{ CsrfToken }}">
+                {{ end }}
+                
+                <div class="form-group">
+                    <label for="display_name">{{ t("profile.display_name", currentLang) }}:</label>
+                    <input type="text" id="display_name" name="display_name" value="{{ UserDisplayName }}" maxlength="50" required>
+                    <small class="form-help">{{ t("profile.display_name_help", currentLang) }}</small>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">{{ t("profile.update_display_name", currentLang) }}</button>
+            </form>
+        </div>
+
+        <!-- Privacy Settings Section -->
+        <div class="profile-section">
+            <h2>{{ t("profile.privacy_settings", currentLang) }}</h2>
+            
+            <!-- Privacy settings with auto-save and visual feedback -->
+            <div id="privacy-settings-container">
+                <div class="privacy-options">
+                    <div class="privacy-option">
+                        <input type="checkbox" 
+                               id="show_auth_method" 
+                               name="show_auth_method" 
+                               {{ if User.ShowAuthMethod }}checked{{ end }}
+                               hx-post="/user/privacy"
+                               hx-trigger="change"
+                               hx-target="#privacy-settings-container"
+                               hx-swap="outerHTML"
+                               hx-include="[name='show_username'], [name='show_profile_info']"
+                               hx-indicator="#privacy-loading">
+                        <div class="privacy-option-content">
+                            <div class="privacy-option-title">{{ t("profile.show_auth_method", currentLang) }}</div>
+                            <div class="privacy-option-desc">{{ t("profile.show_auth_method_desc", currentLang) }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="privacy-option">
+                        <input type="checkbox" 
+                               id="show_username" 
+                               name="show_username" 
+                               {{ if User.ShowUsername }}checked{{ end }}
+                               hx-post="/user/privacy"
+                               hx-trigger="change"
+                               hx-target="#privacy-settings-container"
+                               hx-swap="outerHTML"
+                               hx-include="[name='show_auth_method'], [name='show_profile_info']"
+                               hx-indicator="#privacy-loading">
+                        <div class="privacy-option-content">
+                            <div class="privacy-option-title">{{ t("profile.show_username", currentLang) }}</div>
+                            <div class="privacy-option-desc">{{ t("profile.show_username_desc", currentLang) }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="privacy-option">
+                        <input type="checkbox" 
+                               id="show_profile_info" 
+                               name="show_profile_info" 
+                               {{ if User.ShowProfileInfo }}checked{{ end }}
+                               hx-post="/user/privacy"
+                               hx-trigger="change"
+                               hx-target="#privacy-settings-container"
+                               hx-swap="outerHTML"
+                               hx-include="[name='show_auth_method'], [name='show_username']"
+                               hx-indicator="#privacy-loading">
+                        <div class="privacy-option-content">
+                            <div class="privacy-option-title">{{ t("profile.show_profile_info", currentLang) }}</div>
+                            <div class="privacy-option-desc">{{ t("profile.show_profile_info_desc", currentLang) }}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Loading indicator -->
+                <div id="privacy-loading" class="privacy-loading" style="display: none;">
+                    <div class="loading-spinner"></div>
+                    <span>{{ t("profile.saving_settings", currentLang) }}</span>
+                </div>
+                
+                <!-- Success message area -->
+                <div id="privacy-message" class="privacy-message" style="display: none;"></div>
+                
+                <!-- Hidden CSRF token -->
+                {{ if CsrfToken }}
+                    <input type="hidden" name="_token" value="{{ CsrfToken }}">
+                {{ end }}
+            </div>
+        </div>
+
+        <!-- Security Section (for email/password users) -->
+        {{ if User.AuthType == "email" || User.AuthType == "password" }}
+        <div class="profile-section">
+            <h2>{{ t("security.title", currentLang) }}</h2>
+            
+            <!-- Two-Factor Authentication -->
+            <div class="security-option">
+                <h3>{{ t("security.totp_title", currentLang) }}</h3>
+                
+                {{ if User.TOTPEnabled }}
+                    <div class="security-status enabled">
+                        <div class="security-status-icon">🔐</div>
+                        <div class="security-status-content">
+                            <h4>{{ t("security.totp_enabled", currentLang) }}</h4>
+                            <p>{{ t("security.totp_enabled_desc", currentLang) }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="totp-actions">
+                        <button type="button" class="btn btn-secondary" onclick="showBackupCodes()">
+                            {{ t("security.view_backup_codes", currentLang) }}
+                        </button>
+                        <button type="button" class="btn btn-danger" onclick="disableTOTP()">
+                            {{ t("security.disable_2fa", currentLang) }}
+                        </button>
+                    </div>
+                {{ else }}
+                    <div class="security-status disabled">
+                        <div class="security-status-icon">⚠️</div>
+                        <div class="security-status-content">
+                            <h4>{{ t("security.totp_disabled", currentLang) }}</h4>
+                            <p>{{ t("security.totp_disabled_desc", currentLang) }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="totp-setup">
+                        <button type="button" class="btn btn-primary" onclick="setupTOTP()">
+                            {{ t("security.enable_2fa", currentLang) }}
+                        </button>
+                    </div>
+                {{ end }}
+                
+                <!-- Backup Codes Modal -->
+                <div id="backup-codes-modal" class="security-modal">
+                    <div class="modal-content">
+                        <h4>{{ t("security.backup_codes_title", currentLang) }}</h4>
+                        <p>{{ t("security.backup_codes_desc", currentLang) }}</p>
+                        <div id="backup-codes-list">
+                            <!-- Backup codes will be loaded here -->
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="hideBackupCodes()">{{ t("security.close", currentLang) }}</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Disable 2FA Modal -->
+                <div id="disable-totp-modal" class="security-modal">
+                    <div class="modal-content">
+                        <h4>{{ t("security.disable_2fa_title", currentLang) }}</h4>
+                        <p><strong>{{ t("security.disable_2fa_warning", currentLang) }}</strong></p>
+                        <form method="POST" action="/user/2fa/disable">
+                            {{ if CsrfToken }}
+                                <input type="hidden" name="_token" value="{{ CsrfToken }}">
+                            {{ end }}
+                            <div class="form-group">
+                                <label for="totp_code">{{ t("security.disable_2fa_confirm", currentLang) }}</label>
+                                <input type="text" id="totp_code" name="totp_code" placeholder="123456" maxlength="6" required>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-danger">{{ t("security.disable_2fa", currentLang) }}</button>
+                                <button type="button" class="btn btn-secondary" onclick="hideDisableTOTP()">{{ t("security.cancel", currentLang) }}</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Setup 2FA Modal -->
+                <div id="setup-totp-modal" class="security-modal">
+                    <div class="modal-content">
+                        <h4>{{ t("security.setup_2fa_title", currentLang) }}</h4>
+                        
+                        <!-- Step 1: Instructions -->
+                        <div id="totp-step1" class="totp-step">
+                            <p>{{ t("security.setup_step1_desc", currentLang) }}</p>
+                            <ol>
+                                <li>{{ t("security.setup_step1_install", currentLang) }}</li>
+                                <li>{{ t("security.setup_step1_generate", currentLang) }}</li>
+                                <li>{{ t("security.setup_step1_scan", currentLang) }}</li>
+                                <li>{{ t("security.setup_step1_verify", currentLang) }}</li>
+                            </ol>
+                            
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-primary" onclick="generateTOTPSecret()">
+                                    {{ t("security.generate_qr", currentLang) }}
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="hideSetupTOTP()">{{ t("security.cancel", currentLang) }}</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 2: QR Code and Verification -->
+                        <div id="totp-step2" class="totp-step" style="display: none;">
+                            <p>{{ t("security.setup_step2_scan", currentLang) }}</p>
+                            <div id="qr-code-container">
+                                <!-- QR code will be displayed here -->
+                            </div>
+                            
+                            <p><strong>{{ t("security.setup_step2_manual", currentLang) }}</strong></p>
+                            <code id="totp-secret-display">
+                                <!-- Secret key will be displayed here -->
+                            </code>
+                            
+                            <form method="POST" action="/user/2fa/enable" id="totp-verification-form">
+                                {{ if CsrfToken }}
+                                    <input type="hidden" name="_token" value="{{ CsrfToken }}">
+                                {{ end }}
+                                <input type="hidden" id="totp-secret-input" name="totp_secret" value="">
+                                
+                                <div class="form-group">
+                                    <label for="totp_verify_code">{{ t("security.setup_step2_verify", currentLang) }}</label>
+                                    <input type="text" id="totp_verify_code" name="totp_code" placeholder="123456" maxlength="6" required>
+                                </div>
+                                
+                                <div class="form-actions">
+                                    <button type="submit" class="btn btn-primary">{{ t("security.verify_enable_2fa", currentLang) }}</button>
+                                    <button type="button" class="btn btn-secondary" onclick="backToStep1()">{{ t("security.back", currentLang) }}</button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <!-- Step 3: Success and Backup Codes -->
+                        <div id="totp-step3" class="totp-step" style="display: none;">
+                            <div class="security-status enabled">
+                                <div class="security-status-icon">✅</div>
+                                <div class="security-status-content">
+                                    <h4>{{ t("security.setup_step3_success", currentLang) }}</h4>
+                                    <p>{{ t("security.setup_step3_backup", currentLang) }}</p>
+                                </div>
+                            </div>
+                            
+                            <div id="setup-backup-codes">
+                                <!-- Backup codes will be displayed here -->
+                            </div>
+                            <p><em>{{ t("security.setup_step3_backup_note", currentLang) }}</em></p>
+                            
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-primary" onclick="finishTOTPSetup()">
+                                    {{ t("security.setup_step3_done", currentLang) }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Password Change (Future Feature) -->
+            <div class="security-option">
+                <h3>{{ t("security.password_title", currentLang) }}</h3>
+                <p>{{ t("security.password_desc", currentLang) }}</p>
+                <button type="button" class="btn btn-secondary" disabled>
+                    {{ t("security.change_password", currentLang) }}
+                </button>
+            </div>
+        </div>
+        {{ end }}
+
+        <!-- Pagination Settings Section -->
+        <div class="profile-section">
+            <h2>{{ t("profile.pagination_settings", currentLang) }}</h2>
+            <p>{{ t("profile.pagination_settings_desc", currentLang) }}</p>
+            
+            <div id="pagination-settings-container">
+                <form hx-post="/user/pagination" 
+                      hx-trigger="change from:select" 
+                      hx-target="#pagination-message" 
+                      hx-swap="innerHTML"
+                      hx-indicator="#pagination-loading">
+                    {{ if CsrfToken }}
+                        <input type="hidden" name="_token" value="{{ CsrfToken }}">
+                    {{ end }}
+                    
+                    <div class="form-group">
+                        <label for="page_size">{{ t("profile.default_page_size", currentLang) }}:</label>
+                        <select id="page_size" name="page_size" class="form-control">
+                            {{ range PaginationConfig.PageSizeOptions }}
+                                                            <option value="{{ . }}" {{ if (User.GetPageSize() && User.GetPageSize() == .) || (!User.GetPageSize() && . == PaginationConfig.DefaultPageSize) }}selected{{ end }}>
+                                {{ . }} {{ t("profile.pitches_per_page", currentLang) }}
+                            </option>
+                            {{ end }}
+                        </select>
+                        <small class="form-help">
+                            {{ t("profile.page_size_help", currentLang) }}
+                            {{ if User.GetPageSize() }}
+                                {{ t("profile.current_preference", currentLang) }}: {{ User.GetPageSize() }}
+                            {{ else }}
+                                {{ t("profile.using_default", currentLang) }}: {{ PaginationConfig.DefaultPageSize }}
+                            {{ end }}
+                        </small>
+                    </div>
+                </form>
+                
+                <!-- Loading indicator -->
+                <div id="pagination-loading" class="pagination-loading" style="display: none;">
+                    <div class="loading-spinner"></div>
+                    <span>{{ t("profile.saving_preference", currentLang) }}</span>
+                </div>
+                
+                <!-- Message area -->
+                <div id="pagination-message" class="pagination-message"></div>
+            </div>
+        </div>
+
+        <!-- Account Actions Section -->
+        <div class="profile-section">
+            <h2>{{ t("profile.account_actions", currentLang) }}</h2>
+            <div class="action-buttons">
+                <a href="/user/pitches" class="btn btn-secondary">
+                    {{ t("profile.my_pitches", currentLang) }}
+                </a>
+                <button type="button" class="btn btn-danger" 
+                        hx-post="/auth/logout" 
+                        hx-confirm="{{ t("profile.logout_confirm", currentLang) }}"
+                        hx-target="body"
+                        hx-swap="outerHTML">
+                    {{ t("profile.logout", currentLang) }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 2FA Setup Functions
+function setupTOTP() {
+    document.getElementById('setup-totp-modal').classList.add('show');
+}
+
+function hideSetupTOTP() {
+    document.getElementById('setup-totp-modal').classList.remove('show');
+    // Reset to step 1
+    document.getElementById('totp-step1').style.display = 'block';
+    document.getElementById('totp-step2').style.display = 'none';
+    document.getElementById('totp-step3').style.display = 'none';
+}
+
+function generateTOTPSecret() {
+    // Get CSRF token from global variable
+    const csrfToken = window.BITCOINPITCH_CSRF;
+    
+    // Create form data with CSRF token
+    const formData = new FormData();
+    formData.append('_token', csrfToken);
+    
+    // Make AJAX request to generate TOTP secret and QR code
+    fetch('/user/2fa/generate', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Display QR code
+            const qrImageURL = `/user/2fa/qr?url=${encodeURIComponent(data.qr_url)}`;
+            document.getElementById('qr-code-container').innerHTML = 
+                `<img src="${qrImageURL}" alt="QR Code">`;
+            
+            // Show manual entry key
+            document.getElementById('totp-secret-display').textContent = data.secret;
+            
+            // Store secret for form submission
+            document.getElementById('totp-secret-input').value = data.secret;
+            
+            // Move from step 1 to step 2
+            document.getElementById('totp-step1').style.display = 'none';
+            document.getElementById('totp-step2').style.display = 'block';
+        } else {
+            alert('Error generating TOTP secret: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error generating TOTP secret: ' + error.message);
+    });
+}
+
+function backToStep1() {
+    document.getElementById('totp-step2').style.display = 'none';
+    document.getElementById('totp-step1').style.display = 'block';
+}
+
+function finishTOTPSetup() {
+    hideSetupTOTP();
+    // Reload page to show updated 2FA status
+    window.location.reload();
+}
+
+// 2FA Management Functions
+function showBackupCodes() {
+    // Get CSRF token from global variable
+    const csrfToken = window.BITCOINPITCH_CSRF;
+    
+    // Create form data with CSRF token
+    const formData = new FormData();
+    formData.append('_token', csrfToken);
+    
+    // Make AJAX request to get backup codes
+    fetch('/user/2fa/backup-codes', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const codesList = document.getElementById('backup-codes-list');
+            codesList.innerHTML = '';
+            data.codes.forEach(code => {
+                const codeElement = document.createElement('span');
+                codeElement.className = 'backup-code';
+                codeElement.textContent = code;
+                codesList.appendChild(codeElement);
+            });
+            document.getElementById('backup-codes-modal').classList.add('show');
+        } else {
+            alert('Error loading backup codes: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error loading backup codes');
+    });
+}
+
+function hideBackupCodes() {
+    document.getElementById('backup-codes-modal').classList.remove('show');
+}
+
+function disableTOTP() {
+    document.getElementById('disable-totp-modal').classList.add('show');
+}
+
+function hideDisableTOTP() {
+    document.getElementById('disable-totp-modal').classList.remove('show');
+}
+
+// Close modals when clicking outside
+window.onclick = function(event) {
+            const modals = document.querySelectorAll('.security-modal');
+    modals.forEach(modal => {
+        if (event.target === modal) {
+            modal.classList.remove('show');
+        }
+    });
+}
+</script>
+{{ end }} 

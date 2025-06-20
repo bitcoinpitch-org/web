@@ -1,0 +1,146 @@
+{{ extends "../layouts/base.jet" }}
+
+{{ block title() }}Verify Email - BitcoinPitch.org{{ end }}
+
+{{ block main() }}
+<div class="container">
+    <div class="verification-page">
+        <div class="verification-content">
+            {{ if isset(Success) }}
+            <div class="verification-success">
+                <div class="success-icon">✅</div>
+                <h1>{{ t("verify.success_title", currentLang) }}</h1>
+                <p>{{ t("verify.success_message", currentLang) }}</p>
+                <div class="verification-actions">
+                    <a href="#" onclick="showAuthModal()" class="button primary">
+                        {{ t("verify.login_now", currentLang) }}
+                    </a>
+                    <a href="/" class="button secondary">
+                        {{ t("verify.browse_pitches", currentLang) }}
+                    </a>
+                </div>
+            </div>
+            {{ else if isset(Error) }}
+            <div class="verification-error">
+                <div class="error-icon">❌</div>
+                <h1>{{ t("verify.error_title", currentLang) }}</h1>
+                <p>{{ Error }}</p>
+                <div class="verification-actions">
+                    <a href="/register" class="button primary">
+                        {{ t("verify.try_again", currentLang) }}
+                    </a>
+                    <a href="/" class="button secondary">
+                        {{ t("verify.back_home", currentLang) }}
+                    </a>
+                </div>
+            </div>
+            {{ else }}
+            <div class="verification-pending">
+                <div class="pending-icon">📧</div>
+                <h1>{{ t("verify.pending_title", currentLang) }}</h1>
+                <p>{{ t("verify.pending_message", currentLang) }}</p>
+                <div class="verification-actions">
+                    <a href="/register" class="button secondary">
+                        {{ t("verify.back_register", currentLang) }}
+                    </a>
+                </div>
+            </div>
+            {{ end }}
+        </div>
+    </div>
+</div>
+
+<style>
+.verification-page {
+    max-width: 600px;
+    margin: 4rem auto;
+    padding: 2rem;
+    text-align: center;
+}
+
+.verification-content {
+    background: var(--color-background);
+    border: 1px solid var(--color-background-secondary);
+    border-radius: var(--border-radius-lg);
+    padding: 3rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.success-icon, .error-icon, .pending-icon {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+}
+
+.verification-content h1 {
+    color: var(--color-text);
+    margin-bottom: 1rem;
+    font-size: 2rem;
+}
+
+.verification-content p {
+    color: var(--color-text-secondary);
+    margin-bottom: 2rem;
+    line-height: 1.6;
+    font-size: 1.1rem;
+}
+
+.verification-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.verification-success h1 {
+    color: var(--color-success, #10b981);
+}
+
+.verification-error h1 {
+    color: var(--color-error, #ef4444);
+}
+
+@media (max-width: 768px) {
+    .verification-page {
+        margin: 2rem 1rem;
+        padding: 1rem;
+    }
+    
+    .verification-content {
+        padding: 2rem;
+    }
+    
+    .verification-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .verification-actions .button {
+        width: 100%;
+        max-width: 250px;
+    }
+}
+</style>
+
+<script>
+function showAuthModal() {
+    // This will show the existing login modal
+    const modal = document.querySelector('.auth-modal');
+    if (modal) {
+        modal.classList.add('active');
+    } else {
+        // If modal doesn't exist, fetch it via HTMX
+        fetch('/auth/login', {
+            headers: {
+                'HX-Request': 'true'
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            document.body.insertAdjacentHTML('beforeend', '<div id="auth-modal">' + html + '</div>');
+            const newModal = document.querySelector('.auth-modal');
+            if (newModal) newModal.classList.add('active');
+        });
+    }
+}
+</script>
+{{ end }} 

@@ -1,0 +1,245 @@
+{{ extends "../layouts/base.jet" }}
+
+{{ block title() }}BitcoinPitch – {{ Category }} | BitcoinPitch.org{{ end }}
+
+{{ block description() }}Browse {{ Category }} pitches on BitcoinPitch.org. Find the perfect way to explain {{ Category }} to anyone.{{ end }}
+
+{{ block main() }}
+
+<!-- Tab panes -->
+<section id="{{ Category }}" class="tab-content active">
+  {{ if TagFilter || LengthFilter || AuthorFilter || LanguageFilter }}
+  <div class="filter-info">
+    <p>Active filters:</p>
+    <div class="active-filters">
+      {{ if LengthFilter }}
+      <span class="filter-tag">
+        Length: {{ LengthFilter }}
+        <button onclick="removeFilter('length')" class="remove-filter">×</button>
+      </span>
+      {{ end }}
+      {{ if TagFilter }}
+      <span class="filter-tag">
+        Tag: {{ TagFilter }}
+        <button onclick="removeFilter('tag')" class="remove-filter">×</button>
+      </span>
+      {{ end }}
+      {{ if LanguageFilter }}
+      <span class="filter-tag">
+        Language: {{ LanguageFilter }}
+        <button onclick="removeFilter('language')" class="remove-filter">×</button>
+      </span>
+      {{ end }}
+      {{ if AuthorFilter == "me" }}
+      <span class="filter-tag">
+        My Pitches
+        <button onclick="removeFilter('author')" class="remove-filter">×</button>
+      </span>
+      {{ end }}
+      <button onclick="clearAllFilters()" class="clear-all-filters">Clear All</button>
+    </div>
+  </div>
+  {{ end }}
+
+  <!-- Pagination Controls Top -->
+  <div class="pagination-controls top">
+    {{ if PaginationConfig.ShowTotalCount }}
+    <div class="total-count">
+      Showing {{ len(pitches) }} of {{ TotalPitches }} pitches
+      {{ if CurrentPage > 1 || TotalPages > 1 }}
+        (Page {{ CurrentPage }} of {{ TotalPages }})
+      {{ end }}
+    </div>
+    {{ end }}
+    
+    {{ if PaginationConfig.ShowPageSizeSelector }}
+    <div class="page-size-selector">
+      <label for="page-size">Pitches per page:</label>
+      <select id="page-size" onchange="changePageSize(this.value)">
+        {{ range PaginationConfig.PageSizeOptions }}
+          <option value="{{ . }}" {{ if . == PageSize }}selected{{ end }}>{{ . }}</option>
+        {{ end }}
+      </select>
+    </div>
+    {{ end }}
+  </div>
+
+  <!-- Pitch List -->
+  <div id="{{ Category }}-pitch-list" class="pitch-list">
+  {{ range pitches }}
+    {{ include "../partials/pitch-card.jet" . }}
+  {{ end }}
+  
+  {{ if len(pitches) == 0 }}
+    <div class="empty-state">
+      <div class="empty-icon">📝</div>
+      <h2>No pitches found</h2>
+      <p>{{ if TagFilter || LengthFilter || AuthorFilter || LanguageFilter }}
+        No pitches match your current filters. Try removing some filters to see more results.
+      {{ else }}
+        Be the first to add a {{ Category }} pitch!
+      {{ end }}</p>
+      <button class="button primary" hx-get="/pitch/form" hx-target="#pitch-form-modal .modal-content">
+        Add Your Pitch
+      </button>
+    </div>
+  {{ end }}
+  </div>
+
+  <!-- Pagination Controls Bottom -->
+  {{ if TotalPages > 1 }}
+    <div class="pagination bottom">
+      <div class="pagination-info">
+        <span>Page {{ CurrentPage }} of {{ TotalPages }}</span>
+      </div>
+      
+      <div class="pagination-buttons">
+        {{ if CurrentPage > 1 }}
+          <a href="{{ buildPaginationURL(1, PageSize) }}" 
+             class="page-btn first" 
+             onclick="goToPage(1, {{ PageSize }}); return false;">
+            ⟪ First
+          </a>
+          <a href="{{ buildPaginationURL(CurrentPage - 1, PageSize) }}" 
+             class="page-btn prev" 
+             onclick="goToPage({{ CurrentPage - 1 }}, {{ PageSize }}); return false;">
+            ⟨ Previous
+          </a>
+        {{ end }}
+        
+        <!-- Page numbers (show 5 around current) -->
+        {{ if CurrentPage > 3 }}
+          <span class="page-ellipsis">…</span>
+        {{ end }}
+        
+        {{ range page := iter(1, TotalPages) }}
+          {{ if page >= max(1, sub(CurrentPage, 2)) && page <= min(TotalPages, add(CurrentPage, 2)) }}
+            {{ if page == CurrentPage }}
+              <span class="page-btn current">{{ page }}</span>
+            {{ else }}
+                          <a href="{{ buildPaginationURL(page, PageSize) }}" 
+               class="page-btn" 
+               onclick="goToPage({{ page }}, {{ PageSize }}); return false;">
+              {{ page }}
+            </a>
+            {{ end }}
+          {{ end }}
+        {{ end }}
+        
+        {{ if CurrentPage < sub(TotalPages, 2) }}
+          <span class="page-ellipsis">…</span>
+        {{ end }}
+        
+        {{ if CurrentPage < TotalPages }}
+          <a href="{{ buildPaginationURL(CurrentPage + 1, PageSize) }}" 
+             class="page-btn next" 
+             onclick="goToPage({{ CurrentPage + 1 }}, {{ PageSize }}); return false;">
+            Next ⟩
+          </a>
+          <a href="{{ buildPaginationURL(TotalPages, PageSize) }}" 
+             class="page-btn last" 
+             onclick="goToPage({{ TotalPages }}, {{ PageSize }}); return false;">
+            Last ⟫
+          </a>
+        {{ end }}
+      </div>
+    </div>
+  {{ end }}
+</section>
+
+<!-- Pitch Form Modal Container -->
+<div id="pitch-form-modal" class="modal">
+    <div class="modal-content"></div>
+</div>
+
+<!-- Delete Confirmation Modal Container -->
+<div id="delete-confirm-modal" class="modal">
+    <div class="modal-content"></div>
+</div>
+{{ end }}
+
+{{ block scripts() }}
+<script src="/static/js/main.js" defer></script>
+<script src="/static/js/tutorial-i18n.js" defer onerror="console.error('Tutorial i18n script failed to load')"></script>
+<script src="/static/js/tutorial.js" defer onerror="console.error('Tutorial script failed to load')"></script>
+<script>
+// Pagination functions
+function changePageSize(size) {
+    const url = new URL(window.location);
+    url.searchParams.set('size', size);
+    url.searchParams.set('page', '1'); // Reset to first page when changing size
+    window.location.href = url.toString();
+}
+
+function goToPage(page, size) {
+    const url = new URL(window.location);
+    url.searchParams.set('page', page);
+    if (size) {
+        url.searchParams.set('size', size);
+    }
+    window.location.href = url.toString();
+}
+
+// Filter management functions
+function removeFilter(filterType) {
+    const url = new URL(window.location);
+    url.searchParams.delete(filterType);
+    url.searchParams.set('page', '1'); // Reset to first page when filtering
+    window.location.href = url.toString();
+}
+
+function clearAllFilters() {
+    const url = new URL(window.location);
+    url.searchParams.delete('tag');
+    url.searchParams.delete('length');
+    url.searchParams.delete('author');
+    url.searchParams.delete('language');
+    url.searchParams.set('page', '1');
+    window.location.href = url.toString();
+}
+
+// Add filter parameter (additive filtering)
+function addFilterParam(key, value) {
+    const url = new URL(window.location);
+    url.searchParams.set(key, value);
+    url.searchParams.set('page', '1'); // Reset to first page when filtering
+    window.location.href = url.toString();
+}
+
+// Make tags clickable and additive
+function makeTagsAdditive() {
+    document.querySelectorAll('.tag:not([data-additive-ready])').forEach(tag => {
+        tag.setAttribute('data-additive-ready', 'true');
+        tag.addEventListener('click', function(e) {
+            e.preventDefault();
+            const tagName = this.getAttribute('data-tag') || this.textContent.trim();
+            addFilterParam('tag', tagName);
+        });
+    });
+}
+
+// Make length categories additive
+function makeLengthAdditive() {
+    document.querySelectorAll('[data-length]:not([data-additive-ready])').forEach(element => {
+        element.setAttribute('data-additive-ready', 'true');
+        element.addEventListener('click', function(e) {
+            e.preventDefault();
+            const length = this.getAttribute('data-length');
+            addFilterParam('length', length);
+        });
+    });
+}
+
+// Initialize additive filtering on page load
+document.addEventListener('DOMContentLoaded', function() {
+    makeTagsAdditive();
+    makeLengthAdditive();
+});
+
+// Re-initialize after HTMX swaps
+document.addEventListener('htmx:afterSwap', function() {
+    makeTagsAdditive();
+    makeLengthAdditive();
+});
+</script>
+{{ end }} 

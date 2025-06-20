@@ -1,0 +1,324 @@
+<!-- Pitch Form Modal Content Only -->
+<div class="modal-header">
+    <h2>Add Your Pitch</h2>
+    <button class="close-modal" aria-label="Close modal">&times;</button>
+</div>
+<form id="pitch-form" class="pitch-form" 
+    hx-post="{{ FormAction }}"
+    hx-headers='{"X-CSRF-Token": "{{ CsrfToken }}"}'
+    hx-target="{{ if Pitch.ID }}#pitch-{{ Pitch.ID }}{{ else }}#pitch-form-modal{{ end }}"
+    hx-swap="{{ if Pitch.ID }}outerHTML{{ else }}none{{ end }}"
+    hx-indicator="#submit-indicator"
+
+    {{ if isset(CsrfToken) }}
+    <input type="hidden" name="_token" value="{{ CsrfToken }}">
+    {{ end }}
+    <!-- Main Category -->
+    <div class="form-group">
+        <label>Category</label>
+        <div class="category-toggle">
+            <button type="button" class="category-btn{{ if MainCategory == "bitcoin" }} active{{ end }}" data-value="bitcoin">Bitcoin</button>
+            <button type="button" class="category-btn{{ if MainCategory == "lightning" }} active{{ end }}" data-value="lightning">Lightning</button>
+            <button type="button" class="category-btn{{ if MainCategory == "cashu" }} active{{ end }}" data-value="cashu">Cashu</button>
+        </div>
+        <input type="hidden" name="main_category" id="main-category" value="{{ MainCategory }}" required>
+    </div>
+
+    <!-- Pitch Content -->
+    <div class="form-group">
+        <label for="content">Your Pitch</label>
+        <div class="textarea-mirror-wrapper">
+            <div id="content-mirror" class="textarea-mirror"></div>
+            <textarea id="content" name="content" required
+                minlength="{{ PitchLimits.OneLinerMin }}"
+                placeholder="Write your pitch here..."
+                data-length-category="elevator">{{ Pitch.Content }}</textarea>
+        </div>
+        <div class="char-counter">
+            <span class="current">{{ len(Pitch.Content) }}</span>/<span class="max">{{ PitchLimits.ElevatorMax }}</span> characters
+            <span class="length-category"></span>
+        </div>
+    </div>
+
+    <!-- Language -->
+    {{ include "language-picker-searchable.jet" }}
+
+    <!-- Posted By -->
+    <div class="form-group">
+        <label>Posted by</label>
+        <div class="posted-by">
+            {{ if CurrentUser }}
+                {{ if CurrentUser.GetDisplayName() }}{{ CurrentUser.GetDisplayName() }}{{ else }}{{ CurrentUser.Username }}{{ end }}
+            {{ else }}
+                Anonymous (not logged in)
+            {{ end }}
+        </div>
+    </div>
+
+    <!-- Author Attribution -->
+    <div class="form-group">
+        <label>Author Attribution</label>
+        <div class="author-type">
+            <div class="author-option">
+                <label class="author-label">
+                    <input type="radio" name="author_type" value="same" checked>
+                    <span class="author-label-text">Same as Posted By</span>
+                </label>
+            </div>
+            
+            <div class="author-option">
+                <label class="author-label">
+                    <input type="radio" name="author_type" value="unknown">
+                    <span class="author-label-text">Unknown</span>
+                </label>
+            </div>
+            
+            <div class="author-option">
+                <label class="author-label">
+                    <input type="radio" name="author_type" value="custom">
+                    <span class="author-label-text">Custom Name:</span>
+                </label>
+                <input type="text" name="author_name" id="author-name" class="author-input" disabled style="display:none;" placeholder="Enter custom name">
+            </div>
+            
+            <div class="author-option">
+                <label class="author-label">
+                    <input type="radio" name="author_type" value="twitter">
+                    <span class="author-label-text">Twitter Handle:</span>
+                </label>
+                <input type="text" name="author_handle" id="author-handle-twitter" class="author-input" disabled style="display:none;" pattern="^@[A-Za-z0-9_]{1,15}$" placeholder="@username">
+            </div>
+            
+            <div class="author-option">
+                <label class="author-label">
+                    <input type="radio" name="author_type" value="nostr">
+                    <span class="author-label-text">Nostr Handle:</span>
+                </label>
+                <input type="text" name="author_handle" id="author-handle-nostr" class="author-input" disabled style="display:none;" pattern="^npub1[a-zA-Z0-9]{58}$" placeholder="npub1...">
+            </div>
+        </div>
+    </div>
+
+    <!-- Tags -->
+    <div class="form-group">
+        <label for="tags">Tags (up to 5)</label>
+        <div class="tag-input-container">
+            <input type="text" id="tag-input" placeholder="Add a tag...">
+            <div id="tag-suggestions" class="tag-suggestions"></div>
+        </div>
+        <div id="selected-tags" class="selected-tags">
+            {{ range Pitch.Tags }}<span class="tag">{{ .Name }}</span>{{ end }}
+        </div>
+        <input type="hidden" name="tags" id="tags-hidden" value="{{ range i, tag := Pitch.Tags }}{{ if i > 0 }},{{ end }}{{ tag.Name }}{{ end }}">
+    </div>
+
+    <div class="form-actions">
+        <button type="button" class="button secondary close-modal">Cancel</button>
+        <button type="submit" class="button primary" id="submit-pitch-btn">
+            <span id="submit-indicator" class="htmx-indicator">Submitting...</span>
+            <span>{{ SubmitLabel }}</span>
+        </button>
+    </div>
+</form>
+
+<script>
+// Wrap ALL form functionality in IIFE to prevent variable conflicts on repeated executions
+(function() {
+    
+
+
+    // Author attribution logic
+    function updateAuthorInputs() {
+        const radios = document.querySelectorAll('input[name="author_type"]');
+        const custom = document.getElementById('author-name');
+        const twitter = document.getElementById('author-handle-twitter');
+        const nostr = document.getElementById('author-handle-nostr');
+        
+        // Hide and disable all inputs by default
+        custom.disabled = true; 
+        custom.style.display = 'none';
+        twitter.disabled = true; 
+        twitter.style.display = 'none';
+        nostr.disabled = true; 
+        nostr.style.display = 'none';
+        
+        // Remove active styling from all labels
+        document.querySelectorAll('.author-label').forEach(label => {
+            label.style.backgroundColor = 'white';
+            label.style.borderColor = 'transparent';
+        });
+        
+        radios.forEach(radio => {
+            if (radio.checked) {
+                // Add active styling to selected label
+                const label = radio.closest('.author-label');
+                if (label) {
+                    label.style.backgroundColor = 'rgba(247, 147, 26, 0.1)';
+                    label.style.borderColor = 'rgba(247, 147, 26, 0.3)';
+                }
+                
+                // Show and enable appropriate input
+                if (radio.value === 'custom') {
+                    custom.disabled = false; 
+                    custom.style.display = 'block';
+                    setTimeout(() => custom.focus(), 100);
+                } else if (radio.value === 'twitter') {
+                    twitter.disabled = false; 
+                    twitter.style.display = 'block';
+                    setTimeout(() => twitter.focus(), 100);
+                } else if (radio.value === 'nostr') {
+                    nostr.disabled = false; 
+                    nostr.style.display = 'block';
+                    setTimeout(() => nostr.focus(), 100);
+                }
+            }
+        });
+    }
+    
+    document.querySelectorAll('input[name="author_type"]').forEach(radio => {
+        radio.addEventListener('change', updateAuthorInputs);
+    });
+    updateAuthorInputs(); // Call immediately instead of waiting for DOMContentLoaded
+
+    window.closeModal = function() {
+        const modal = document.querySelector('.modal');
+        if (modal) modal.classList.remove('active');
+    };
+    
+    console.log('[DEBUG] Functions exposed to window:', {
+        closeModal: typeof window.closeModal
+    });
+
+    // Initialize category button handlers (called when modal opens)
+    function initCategoryButtons() {
+        const form = document.querySelector('#pitch-form');
+        if (!form) return;
+        
+        const categoryBtns = form.querySelectorAll('.category-btn');
+        const categoryInput = form.querySelector('#main-category');
+        
+        categoryBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                categoryBtns.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                categoryInput.value = this.dataset.value;
+                
+                // Update HTMX target based on selected category for new pitches
+                const category = this.dataset.value;
+                const currentTarget = form.getAttribute('hx-target');
+                if (!currentTarget.includes('#pitch-')) { // Only update for new pitches, not edits
+                    form.setAttribute('hx-target', `#${category}-pitch-list`);
+                }
+            });
+        });
+    }
+
+    // Call when modal content is loaded
+    setTimeout(initCategoryButtons, 100);
+
+    // Tag handling - properly scoped variables
+    let currentTags = new Set();
+    let tagSuggestionTimeout;
+    const tagInput = document.getElementById('tag-input');
+    const selectedTags = document.getElementById('selected-tags');
+    const tagsHidden = document.getElementById('tags-hidden');
+    const tagSuggestions = document.getElementById('tag-suggestions');
+
+    function initTags() {
+        // Initialize from existing hidden input
+        const existingTags = tagsHidden.value.split(',').filter(Boolean);
+        currentTags = new Set(existingTags);
+        renderSelectedTags();
+        
+        // Tag input event handlers
+        if (tagInput) {
+            tagInput.addEventListener('input', handleTagInput);
+            tagInput.addEventListener('keydown', handleTagKeydown);
+        }
+    }
+
+    function renderSelectedTags() {
+        if (!selectedTags) return;
+        
+        selectedTags.innerHTML = Array.from(currentTags).map(tag => `
+            <span class="tag">
+                ${tag}
+                <button type="button" class="remove-tag" data-tag="${tag}">&times;</button>
+            </span>
+        `).join('');
+        
+        // Update hidden input
+        tagsHidden.value = Array.from(currentTags).join(',');
+        
+        // Add remove handlers
+        selectedTags.querySelectorAll('.remove-tag').forEach(btn => {
+            btn.addEventListener('click', function() {
+                currentTags.delete(this.dataset.tag);
+                renderSelectedTags();
+            });
+        });
+    }
+
+    function handleTagInput(e) {
+        const value = e.target.value.trim().toLowerCase();
+        
+        if (value.length < 2) {
+            if (tagSuggestions) tagSuggestions.style.display = 'none';
+            return;
+        }
+        
+        // Debounce API calls
+        clearTimeout(tagSuggestionTimeout);
+        tagSuggestionTimeout = setTimeout(async () => {
+            try {
+                const response = await fetch(`/api/tags/suggestions?q=${encodeURIComponent(value)}&limit=10`);
+                if (!response.ok) throw new Error('Failed to fetch suggestions');
+                
+                const tags = await response.json();
+                
+                if (tags.length > 0 && tagSuggestions) {
+                    tagSuggestions.innerHTML = tags.map(tag => `
+                        <div class="tag-suggestion" data-tag="${tag.name}">${tag.name} (${tag.usage_count})</div>
+                    `).join('');
+                    tagSuggestions.style.display = 'block';
+                    
+                    // Add click handlers
+                    tagSuggestions.querySelectorAll('.tag-suggestion').forEach(suggestion => {
+                        suggestion.addEventListener('click', function() {
+                            const tag = this.dataset.tag;
+                            if (currentTags.size < 5 && !currentTags.has(tag)) {
+                                currentTags.add(tag);
+                                renderSelectedTags();
+                            }
+                            tagInput.value = '';
+                            tagSuggestions.style.display = 'none';
+                        });
+                    });
+                } else if (tagSuggestions) {
+                    tagSuggestions.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Failed to fetch tag suggestions:', error);
+                if (tagSuggestions) tagSuggestions.style.display = 'none';
+            }
+        }, 300);
+    }
+
+    function handleTagKeydown(e) {
+        if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            const tag = e.target.value.trim().toLowerCase();
+            if (tag && currentTags.size < 5 && !currentTags.has(tag)) {
+                currentTags.add(tag);
+                renderSelectedTags();
+                e.target.value = '';
+            }
+            if (tagSuggestions) tagSuggestions.style.display = 'none';
+        }
+    }
+
+    // Initialize tags when script loads
+    setTimeout(initTags, 100);
+    
+})(); // End of IIFE
+</script> 

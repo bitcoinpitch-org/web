@@ -1,0 +1,19 @@
+<div class="auth-links">
+    <div class="user-menu">
+        <span class="user-greeting" title="{{ if User }}{{ User.Username }}{{ end }}">Hello, {{ if User }}{{ User.GetDisplayName() }}{{ else }}Guest{{ end }}</span>
+        <div class="user-actions">
+            <a href="/user/profile" class="user-link">Profile</a>
+            <a href="{{ if isset(Category) }}{{ if Category }}/{{ Category }}{{ else }}/bitcoin{{ end }}{{ else }}/bitcoin{{ end }}?author=me" class="user-link">My Pitches</a>
+            {{ if User && User.IsAdmin() }}
+                <a href="/admin" class="user-link admin-link">Admin Panel</a>
+            {{ end }}
+            <button type="button" class="auth-button logout" 
+                    hx-post="/auth/logout" 
+                    hx-confirm="Are you sure you want to logout?"
+                    hx-target="body"
+                    hx-swap="outerHTML">
+                Logout
+            </button>
+        </div>
+    </div>
+</div> 

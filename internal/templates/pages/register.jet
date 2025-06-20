@@ -1,0 +1,191 @@
+{{ extends "../layouts/base.jet" }}
+
+{{ block title() }}Register - BitcoinPitch.org{{ end }}
+
+{{ block main() }}
+<div class="container">
+    <div class="register-page">
+        <div class="register-header">
+            <h1>{{ t("register.title", currentLang) }}</h1>
+            <p>{{ t("register.subtitle", currentLang) }}</p>
+        </div>
+
+        <div class="register-form-container">
+            {{ if isset(Error) }}
+            <div class="flash-message flash-message--error">
+                {{ Error }}
+            </div>
+            {{ end }}
+
+            <form class="register-form" method="POST" action="/auth/register">
+                {{ if isset(CsrfToken) }}
+                <input type="hidden" name="_token" value="{{ CsrfToken }}">
+                {{ end }}
+
+                <div class="form-group">
+                    <label for="email">{{ t("register.email", currentLang) }} *</label>
+                    <input type="email" id="email" name="email" required 
+                           value="{{ if isset(Email) }}{{ Email }}{{ end }}"
+                           placeholder="{{ t("register.email_placeholder", currentLang) }}">
+                </div>
+
+                <div class="form-group">
+                    <label for="username">{{ t("register.username", currentLang) }}</label>
+                    <input type="text" id="username" name="username" 
+                           value="{{ if isset(Username) }}{{ Username }}{{ end }}"
+                           placeholder="{{ t("register.username_placeholder", currentLang) }}">
+                    <small class="form-help">{{ t("register.username_help", currentLang) }}</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">{{ t("register.password", currentLang) }} *</label>
+                    <input type="password" id="password" name="password" required 
+                           placeholder="{{ t("register.password_placeholder", currentLang) }}">
+                    <small class="form-help">{{ t("register.password_help", currentLang) }}</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirm_password">{{ t("register.confirm_password", currentLang) }} *</label>
+                    <input type="password" id="confirm_password" name="confirm_password" required 
+                           placeholder="{{ t("register.confirm_password_placeholder", currentLang) }}">
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="button primary">
+                        {{ t("register.create_account", currentLang) }}
+                    </button>
+                </div>
+            </form>
+
+            <div class="register-footer">
+                <p>{{ t("register.already_have_account", currentLang) }} 
+                   <a href="#" onclick="showAuthModal()">{{ t("register.login_here", currentLang) }}</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.register-page {
+    max-width: 500px;
+    margin: 2rem auto;
+    padding: 2rem;
+}
+
+.register-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.register-header h1 {
+    color: var(--color-text);
+    margin-bottom: 0.5rem;
+}
+
+.register-header p {
+    color: var(--color-text-secondary);
+}
+
+.register-form-container {
+    background: var(--color-background);
+    border: 1px solid var(--color-background-secondary);
+    border-radius: var(--border-radius-lg);
+    padding: 2rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.register-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.form-group input {
+    padding: var(--spacing-md);
+    border: 2px solid var(--color-background-secondary);
+    border-radius: var(--border-radius-md);
+    font-size: var(--font-size-base);
+    font-family: var(--font-family-base);
+    transition: var(--transition-base);
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(247, 147, 26, 0.1);
+}
+
+.form-help {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    line-height: 1.4;
+}
+
+.form-actions {
+    margin-top: 1rem;
+}
+
+.register-footer {
+    text-align: center;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-background-secondary);
+}
+
+.register-footer a {
+    color: var(--color-primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.register-footer a:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+    .register-page {
+        margin: 1rem;
+        padding: 1rem;
+    }
+    
+    .register-form-container {
+        padding: 1.5rem;
+    }
+}
+</style>
+
+<script>
+function showAuthModal() {
+    // This will show the existing login modal
+    const modal = document.querySelector('.auth-modal');
+    if (modal) {
+        modal.classList.add('active');
+    } else {
+        // If modal doesn't exist, fetch it via HTMX
+        fetch('/auth/login', {
+            headers: {
+                'HX-Request': 'true'
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            document.body.insertAdjacentHTML('beforeend', '<div id="auth-modal">' + html + '</div>');
+            const newModal = document.querySelector('.auth-modal');
+            if (newModal) newModal.classList.add('active');
+        });
+    }
+}
+</script>
+{{ end }} 

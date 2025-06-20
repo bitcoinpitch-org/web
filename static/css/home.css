@@ -1,0 +1,820 @@
+/* Home Header */
+.home-header {
+    text-align: center;
+    padding: 2.5rem 1rem 1.25rem;
+    position: relative;
+}
+
+.home-header .tagline {
+    font-size: .75rem;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: #555;
+}
+
+.home-header h1 {
+    font-size: 2.5rem;
+    letter-spacing: .05em;
+    margin: .25rem 0 1rem;
+}
+
+/* Add Pitch Button */
+.add-pitch {
+    display: inline-block;
+    margin: .75rem auto 1.25rem;
+    padding: .65rem 1.5rem;
+    background: #ff9500;
+    color: #fff;
+    font-weight: 700;
+    border: none;
+    border-radius: .55rem;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.add-pitch:hover {
+    background: #e07f00;
+}
+
+.add-pitch:active {
+    transform: scale(.97);
+}
+
+/* Pitch Types Navigation */
+.pitch-types {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+}
+
+.pitch-types .type {
+    font-weight: 600;
+    color: #777;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.pitch-types .type:hover {
+    color: #000;
+}
+
+.pitch-types .type.active {
+    color: #f7931a;
+    font-weight: 700;
+}
+
+.pitch-types .clear-length-filter {
+    color: #c53030 !important;
+    font-weight: 600;
+}
+
+.pitch-types .clear-length-filter:hover {
+    text-decoration: underline;
+}
+
+/* Category Tabs */
+.tabs {
+    display: flex;
+    justify-content: center;
+    list-style: none;
+    margin-bottom: 1rem;
+}
+
+.tab {
+    flex: 1 1 120px;
+    padding: .75rem 1rem;
+    text-align: center;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    background: #ddd;
+    color: #666;
+    user-select: none;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.tab.active {
+    background: #fff;
+    color: #000;
+    border-bottom-color: #fff;
+}
+
+.tab a {
+    color: inherit;
+    text-decoration: none;
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.tab:first-child {
+    border-top-left-radius: 0.65rem;
+    border-bottom-left-radius: 0.65rem;
+}
+
+.tab:last-child {
+    border-top-right-radius: 0.65rem;
+    border-bottom-right-radius: 0.65rem;
+}
+
+/* Tab Content */
+.tab-content {
+    display: none;
+    padding: 0 1rem 2rem;
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Pitch Cards */
+.card {
+    border: 1px solid #e5e7eb;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    padding-right: 8rem; /* Reserve space for voting section */
+    margin-bottom: 1.5rem;
+    position: relative;
+    background: linear-gradient(145deg, #ffffff 0%, #fafbfc 100%);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #f7931a, #ff9500, #e07f00);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    border-color: #d1d5db;
+    transform: translateY(-4px);
+}
+
+.card:hover::before {
+    opacity: 1;
+}
+
+.card .share {
+    font-size: .75rem;
+    text-align: right;
+    color: #6b7280;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #f3f4f6;
+    padding-bottom: 0.75rem;
+    transition: all 0.2s ease;
+}
+
+.card .share a {
+    color: #6b7280;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    font-weight: 500;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    margin: 0 0.125rem;
+}
+
+.card .share a:hover {
+    color: #f7931a;
+    background: rgba(247, 147, 26, 0.1);
+    transform: translateY(-1px);
+}
+
+.card .meta {
+    font-size: .825rem;
+    margin-bottom: 1rem;
+    color: #6b7280;
+    line-height: 1.6;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 0.5rem;
+    border-left: 3px solid #e5e7eb;
+    transition: all 0.2s ease;
+}
+
+.card:hover .meta {
+    border-left-color: #f7931a;
+    background: rgba(247, 147, 26, 0.03);
+}
+
+.card .meta a {
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.card .meta a:hover {
+    text-decoration: underline;
+    color: #1d4ed8;
+}
+
+/* Length Category Badge */
+.length-category-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #f7931a, #ff9500);
+    color: #fff;
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: capitalize;
+    padding: .4rem .8rem;
+    border-radius: .6rem;
+    margin-right: .75rem;
+    vertical-align: middle;
+    box-shadow: 0 4px 8px rgba(247, 147, 26, 0.3);
+    transition: all 0.2s ease;
+}
+
+.card:hover .length-category-badge {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 12px rgba(247, 147, 26, 0.4);
+}
+
+.card .body {
+    font-size: 1.15rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.7;
+    color: #111827;
+    font-weight: 400;
+    padding: 1rem 1.25rem;
+    border-left: 4px solid #f7931a;
+    background: linear-gradient(90deg, rgba(247, 147, 26, 0.05) 0%, rgba(247, 147, 26, 0.01) 50%, transparent 100%);
+    border-radius: 0 0.75rem 0.75rem 0;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.card:hover .body {
+    border-left-color: #e07f00;
+    background: linear-gradient(90deg, rgba(247, 147, 26, 0.08) 0%, rgba(247, 147, 26, 0.02) 50%, transparent 100%);
+}
+
+.card .body::before {
+    content: '"';
+    position: absolute;
+    top: -0.5rem;
+    left: 0.5rem;
+    font-size: 3rem;
+    color: rgba(247, 147, 26, 0.2);
+    font-family: Georgia, serif;
+    line-height: 1;
+}
+
+.card .tags {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.card .tag {
+    border: 1px solid #d1d5db;
+    border-radius: .6rem;
+    padding: .4rem .8rem;
+    font-size: .75rem;
+    background: linear-gradient(145deg, #f9fafb, #f3f4f6);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #374151;
+    font-weight: 600;
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.card .tag::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(247, 147, 26, 0.1), transparent);
+    transition: left 0.5s ease;
+}
+
+.card .tag:hover {
+    background: linear-gradient(145deg, #f7931a, #ff9500);
+    color: white;
+    border-color: #f7931a;
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 4px 8px rgba(247, 147, 26, 0.3);
+}
+
+.card .tag:hover::before {
+    left: 100%;
+}
+
+/* Voting System */
+.votes {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: grid;
+    grid-template-columns: auto 1.8rem;
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+        "up up-count"
+        "score score"
+        "down down-count";
+    column-gap: .5rem;
+    row-gap: .4rem;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    border-radius: 1rem;
+    padding: 1rem 0.75rem;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card:hover .votes {
+    transform: translateY(-50%) scale(1.02);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2), 0 6px 15px rgba(0, 0, 0, 0.15);
+    border-color: rgba(247, 147, 26, 0.2);
+}
+
+.votes .up {
+    grid-area: up;
+}
+
+.votes .up-count {
+    grid-area: up-count;
+}
+
+.votes .score {
+    grid-area: score;
+}
+
+.votes .down {
+    grid-area: down;
+}
+
+.votes .down-count {
+    grid-area: down-count;
+}
+
+.votes button {
+    background: linear-gradient(145deg, #f8fafc, #f1f5f9);
+    border: 2px solid #e2e8f0;
+    font-size: 1.4rem;
+    cursor: pointer;
+    line-height: 1;
+    color: #64748b;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    position: relative;
+    min-width: 2.5rem;
+    height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.votes button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: left 0.6s ease;
+}
+
+.votes button:hover {
+    color: #334155;
+    background: linear-gradient(145deg, #ffffff, #f8fafc);
+    border-color: #cbd5e1;
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.votes button:hover::before {
+    left: 100%;
+}
+
+.votes button:active {
+    transform: translateY(0) scale(1.02);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Active vote states with enhanced feedback */
+.votes button.voted-up {
+    color: #ffffff;
+    background: linear-gradient(145deg, #10b981, #059669);
+    border-color: #10b981;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4), 0 2px 8px rgba(16, 185, 129, 0.2);
+    position: relative;
+}
+
+.votes button.voted-up::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, #10b981, #34d399, #10b981);
+    border-radius: 1rem;
+    z-index: -1;
+    animation: pulse-green 2s infinite;
+}
+
+.votes button.voted-up:hover {
+    color: #ffffff;
+    background: linear-gradient(145deg, #059669, #047857);
+    border-color: #059669;
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.5), 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.votes button.voted-down {
+    color: #ffffff;
+    background: linear-gradient(145deg, #ef4444, #dc2626);
+    border-color: #ef4444;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4), 0 2px 8px rgba(239, 68, 68, 0.2);
+    position: relative;
+}
+
+.votes button.voted-down::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, #ef4444, #f87171, #ef4444);
+    border-radius: 1rem;
+    z-index: -1;
+    animation: pulse-red 2s infinite;
+}
+
+.votes button.voted-down:hover {
+    color: #ffffff;
+    background: linear-gradient(145deg, #dc2626, #b91c1c);
+    border-color: #dc2626;
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 8px 20px rgba(239, 68, 68, 0.5), 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* Disabled state for non-authenticated users */
+.votes button:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+    color: #94a3b8;
+    background: linear-gradient(145deg, #f1f5f9, #e2e8f0);
+    border-color: #e2e8f0;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.votes button:disabled:hover {
+    background: linear-gradient(145deg, #f1f5f9, #e2e8f0);
+    transform: none;
+    color: #94a3b8;
+    border-color: #e2e8f0;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.votes .count {
+    font-size: .8rem;
+    color: #64748b;
+    line-height: 1;
+    font-weight: 700;
+    text-align: center;
+    padding: 0.25rem;
+    border-radius: 0.375rem;
+    background: rgba(248, 250, 252, 0.8);
+    min-width: 1.5rem;
+    transition: all 0.2s ease;
+}
+
+.votes .score {
+    font-weight: 900;
+    color: #1e293b;
+    font-size: 1.2rem;
+    text-align: center;
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+    border-radius: 0.75rem;
+    background: linear-gradient(145deg, #f8fafc, #f1f5f9);
+    border: 2px solid #e2e8f0;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.votes .score::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.8s ease;
+}
+
+.card:hover .votes .score::before {
+    left: 100%;
+}
+
+.votes .score.positive {
+    color: #ffffff;
+    background: linear-gradient(145deg, #10b981, #059669);
+    border-color: #10b981;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.2);
+}
+
+.votes .score.negative {
+    color: #ffffff;
+    background: linear-gradient(145deg, #ef4444, #dc2626);
+    border-color: #ef4444;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.2);
+}
+
+/* Animation keyframes */
+@keyframes pulse-green {
+    0%, 100% {
+        opacity: 0.8;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.02);
+    }
+}
+
+@keyframes pulse-red {
+    0%, 100% {
+        opacity: 0.8;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.02);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .home-header {
+        padding: 1.5rem 1rem 1rem;
+    }
+
+    .home-header h1 {
+        font-size: 2rem;
+    }
+
+    .pitch-types {
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .pitch-types .type {
+        font-size: 0.85rem;
+        padding: 0.5rem 0.75rem;
+    }
+
+    .tabs {
+        flex-direction: row;
+        margin-bottom: 1.5rem;
+    }
+
+    .tab {
+        flex: 1;
+        padding: 0.625rem 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        border-radius: 0;
+    }
+
+    .tab:first-child {
+        border-top-left-radius: 0.5rem;
+        border-bottom-left-radius: 0.5rem;
+    }
+
+    .tab:last-child {
+        border-top-right-radius: 0.5rem;
+        border-bottom-right-radius: 0.5rem;
+    }
+
+    .card {
+        margin-left: 0.75rem;
+        margin-right: 0.75rem;
+        padding: 1.25rem;
+        padding-right: 1.25rem; /* Reset padding on mobile */
+        margin-bottom: 1.25rem;
+    }
+
+    /* Mobile Voting System - Completely Redesigned */
+    .votes {
+        position: static;
+        transform: none;
+        margin-top: 1.25rem;
+        padding: 0.75rem;
+        border-radius: 0.75rem;
+        width: 100%;
+        max-width: none;
+        background: rgba(255, 255, 255, 0.98);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        
+        /* Mobile-optimized grid layout */
+        display: grid;
+        grid-template-columns: auto auto 1fr auto auto;
+        grid-template-rows: auto;
+        grid-template-areas: "up up-count score down-count down";
+        gap: 0.5rem;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .card:hover .votes {
+        transform: none;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Mobile vote button sizes - much smaller */
+    .votes button {
+        min-width: 2rem;
+        height: 2rem;
+        font-size: 1rem;
+        padding: 0.5rem;
+        border-radius: 0.5rem;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .votes button:hover {
+        transform: translateY(-1px) scale(1.02);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .votes button:active {
+        transform: translateY(0) scale(1);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Mobile vote counts - smaller text */
+    .votes .count {
+        font-size: 0.7rem;
+        min-width: 1.25rem;
+        padding: 0.125rem;
+        background: rgba(248, 250, 252, 0.9);
+    }
+
+    /* Mobile score - smaller and centered */
+    .votes .score {
+        font-size: 1rem;
+        margin: 0;
+        padding: 0.375rem 0.5rem;
+        border-radius: 0.5rem;
+        border: 1px solid #e2e8f0;
+        min-width: 2.5rem;
+        text-align: center;
+        justify-self: center;
+    }
+
+    /* Add pitch button mobile optimization */
+    .add-pitch {
+        font-size: 0.9rem;
+        padding: 0.6rem 1.25rem;
+        margin: 0.5rem auto 1rem;
+    }
+
+    /* Mobile card improvements */
+    .card .meta {
+        font-size: 0.8rem;
+        padding: 0.625rem;
+        margin-bottom: 0.875rem;
+    }
+
+    .card .body {
+        font-size: 1rem;
+        margin-bottom: 0.875rem;
+        line-height: 1.5;
+    }
+
+    .card .tags {
+        gap: 0.375rem;
+        flex-wrap: wrap;
+    }
+
+    .card .tag {
+        font-size: 0.7rem;
+        padding: 0.3rem 0.6rem;
+        border-radius: 0.5rem;
+    }
+
+    .card .share {
+        font-size: 0.7rem;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.5rem;
+    }
+
+    .card .share a {
+        padding: 0.25rem 0.375rem;
+        margin: 0 0.1rem;
+        font-size: 0.7rem;
+    }
+
+    /* Length category badge mobile optimization */
+    .length-category-badge {
+        font-size: 0.65rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.375rem;
+    }
+
+    /* Mobile pitch actions */
+    .pitch-actions {
+        margin-top: 1rem;
+        gap: 0.5rem;
+    }
+
+    .edit-pitch,
+    .delete-pitch {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+        border-radius: 0.375rem;
+    }
+}
+
+/* Extra small mobile devices */
+@media (max-width: 480px) {
+    .home-header h1 {
+        font-size: 1.75rem;
+    }
+
+    .tabs {
+        margin: 0 0.5rem 1rem;
+    }
+
+    .tab {
+        padding: 0.5rem 0.25rem;
+        font-size: 0.8rem;
+    }
+
+    .card {
+        margin-left: 0.5rem;
+        margin-right: 0.5rem;
+        padding: 1rem;
+    }
+
+    /* Ultra-compact voting for small screens */
+    .votes {
+        padding: 0.5rem;
+        gap: 0.375rem;
+    }
+
+    .votes button {
+        min-width: 1.75rem;
+        height: 1.75rem;
+        font-size: 0.9rem;
+        padding: 0.375rem;
+    }
+
+    .votes .count {
+        font-size: 0.65rem;
+        min-width: 1rem;
+    }
+
+    .votes .score {
+        font-size: 0.9rem;
+        padding: 0.25rem 0.375rem;
+        min-width: 2rem;
+    }
+
+    .pitch-types {
+        gap: 0.5rem;
+    }
+
+    .pitch-types .type {
+        font-size: 0.8rem;
+        padding: 0.375rem 0.625rem;
+    }
+
+    .add-pitch {
+        font-size: 0.85rem;
+        padding: 0.5rem 1rem;
+    }
+} 

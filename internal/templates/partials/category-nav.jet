@@ -1,0 +1,23 @@
+<!-- Category Navigation -->
+<nav class="category-nav">
+    <ul class="category-tabs">
+        <li class="category-tab {{ if category == "bitcoin" }}active{{ end }}" data-category="bitcoin">
+            <a href="/bitcoin" {{ if category == "bitcoin" }}aria-current="page"{{ end }}>
+                Bitcoin
+                <span class="pitch-count">{{ bitcoinCount }}</span>
+            </a>
+        </li>
+        <li class="category-tab {{ if category == "lightning" }}active{{ end }}" data-category="lightning">
+            <a href="/lightning" {{ if category == "lightning" }}aria-current="page"{{ end }}>
+                Lightning
+                <span class="pitch-count">{{ lightningCount }}</span>
+            </a>
+        </li>
+        <li class="category-tab {{ if category == "cashu" }}active{{ end }}" data-category="cashu">
+            <a href="/cashu" {{ if category == "cashu" }}aria-current="page"{{ end }}>
+                Cashu
+                <span class="pitch-count">{{ cashuCount }}</span>
+            </a>
+        </li>
+    </ul>
+</nav> 

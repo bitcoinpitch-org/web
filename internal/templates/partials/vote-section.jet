@@ -1,0 +1,43 @@
+<div class="votes">
+  {{ if .CurrentUser }}
+    <button type="button" 
+            class="up{{ if .CurrentUserVote && .CurrentUserVote.VoteType == "up" }} voted-up{{ end }}" 
+            aria-label="{{ if .CurrentUserVote && .CurrentUserVote.VoteType == "up" }}Remove your upvote{{ else }}Upvote this pitch{{ end }}"
+            title="{{ if .CurrentUserVote && .CurrentUserVote.VoteType == "up" }}Click to remove your upvote{{ else }}Upvote this pitch{{ end }}"
+            hx-post="/pitch/{{ .ID }}/vote" 
+            hx-vals='{"type": "up"}'
+            hx-target="#pitch-{{ .ID }} .votes"
+            hx-swap="outerHTML">&#9650;</button>
+  {{ else }}
+    <button type="button" 
+            class="up" 
+            disabled
+            aria-label="Login required to vote"
+            title="You need to be logged in to vote on pitches. Click to see login options."
+            onclick="showLoginPrompt()">&#9650;</button>
+  {{ end }}
+  
+  <span class="count up-count" data-count="{{ .UpvoteCount }}">{{ .UpvoteCount }}</span>
+  
+  <span class="score" data-score="{{ .Score }}">{{ .Score }}</span>
+  
+  {{ if .CurrentUser }}
+    <button type="button" 
+            class="down{{ if .CurrentUserVote && .CurrentUserVote.VoteType == "down" }} voted-down{{ end }}" 
+            aria-label="{{ if .CurrentUserVote && .CurrentUserVote.VoteType == "down" }}Remove your downvote{{ else }}Downvote this pitch{{ end }}"
+            title="{{ if .CurrentUserVote && .CurrentUserVote.VoteType == "down" }}Click to remove your downvote{{ else }}Downvote this pitch{{ end }}"
+            hx-post="/pitch/{{ .ID }}/vote" 
+            hx-vals='{"type": "down"}'
+            hx-target="#pitch-{{ .ID }} .votes"
+            hx-swap="outerHTML">&#9660;</button>
+  {{ else }}
+    <button type="button" 
+            class="down" 
+            disabled
+            aria-label="Login required to vote"
+            title="You need to be logged in to vote on pitches. Click to see login options."
+            onclick="showLoginPrompt()">&#9660;</button>
+  {{ end }}
+  
+  <span class="count down-count" data-count="{{ .DownvoteCount }}">{{ .DownvoteCount }}</span>
+</div> 

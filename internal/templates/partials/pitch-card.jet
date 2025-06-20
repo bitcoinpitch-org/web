@@ -1,0 +1,47 @@
+<article class="card" id="pitch-{{ .ID }}">
+  <p class="share">Share:
+    <a href="#" class="share-nostr" data-pitch-id="{{ .ID }}">Nostr</a> · 
+    <a href="#" class="share-twitter" data-pitch-id="{{ .ID }}">X</a> · 
+    <a href="#" class="share-facebook" data-pitch-id="{{ .ID }}">Facebook</a> · 
+    <a href="#" class="share-copy" data-pitch-id="{{ .ID }}">Copy</a>
+  </p>
+  <p class="meta">
+    <span class="length-category-badge">{{ .LengthCategory }}</span>
+    Posted by: 
+    <a href="#">{{ .GetPostedByDisplayName() }}</a>{{ if .ShouldShowPostedByAuthMethod() }} <span class="auth-type">({{ .GetPostedByPublicAuthType() }})</span>{{ end }},
+    Author: 
+    {{ if .AuthorType == "same" }}
+      <a href="#">{{ .GetPostedByDisplayName() }}</a>{{ if .ShouldShowPostedByAuthMethod() }} <span class="auth-type">({{ .GetPostedByPublicAuthType() }})</span>{{ end }}
+    {{ else if .AuthorType == "unknown" }}
+      Unknown
+    {{ else if .AuthorType == "custom" }}
+      {{ .AuthorName }}
+    {{ else if .AuthorType == "twitter" }}
+      <a href="https://twitter.com/{{ .GetAuthorHandleForTwitter() }}" target="_blank" rel="noopener">{{ .GetAuthorHandle() }}</a>
+    {{ else if .AuthorType == "nostr" }}
+      <a href="https://nostr.com/{{ .GetAuthorHandle() }}" target="_blank" rel="noopener" title="{{ .GetAuthorHandle() }}">{{ .GetAuthorHandle()|truncate(16) }}</a>
+    {{ end }}
+  </p>
+  <p class="body">{{ .Content }}</p>
+  <p class="tags">
+    {{ category := .MainCategory }}
+    {{ range .Tags }}<span class="tag clickable-tag" data-tag="{{ .Name }}" data-category="{{ category }}">{{ .Name }}</span>{{ end }}
+  </p>
+  {{ include "vote-section.jet" . }}
+  {{ if .CurrentUser && .CurrentUser.ID.String() == .UserID.String() }}
+    <div class="pitch-actions">
+      <button class="edit-pitch" data-pitch-id="{{ .ID }}" 
+        hx-get="/pitch/{{ .ID }}/edit" 
+        hx-target="#pitch-form-modal .modal-content" 
+        hx-trigger="click">
+        Edit
+      </button>
+      <button class="delete-pitch" data-pitch-id="{{ .ID }}"
+        hx-get="/pitch/{{ .ID }}/delete-confirm" 
+        hx-target="#delete-confirm-modal .modal-content"
+        hx-trigger="click">
+        Delete
+      </button>
+    </div>
+  {{ end }}
+</article> 

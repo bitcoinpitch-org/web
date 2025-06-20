@@ -1,0 +1,311 @@
+<div class="language-picker-enhanced" id="language-picker-enhanced">
+    <label for="language-search">{{ t("ui.language") }}</label>
+    <div class="language-search-container">
+        <input 
+            type="text" 
+            id="language-search" 
+            name="language-search"
+            placeholder="{{ t("ui.search_languages") }}"
+            autocomplete="off"
+            value=""
+        >
+        <input type="hidden" id="language-selected" name="language" value="{{ if .Pitch && .Pitch.Language }}{{ .Pitch.Language }}{{ else }}en{{ end }}">
+        <div class="language-dropdown" id="language-dropdown" style="display: none;">
+            <div class="language-options" id="language-options">
+            </div>
+        </div>
+        <div class="language-selected-display" id="language-selected-display">
+            {{ if .Pitch }}
+            {{ else }}
+                <span class="flag">🇬🇧</span> <span class="name">English</span>
+            {{ end }}
+        </div>
+    </div>
+</div>
+
+<style>
+.language-picker-enhanced {
+    margin-bottom: 1rem;
+}
+
+.language-picker-enhanced label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.language-search-container {
+    position: relative;
+}
+
+.language-search-container input[type="text"] {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1rem;
+    background: var(--bg-color);
+    color: var(--text-color);
+}
+
+.language-search-container input[type="text"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(255, 133, 27, 0.2);
+}
+
+.language-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.language-options {
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.language-option {
+    padding: 0.75rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-color-light);
+    transition: background-color 0.2s;
+}
+
+.language-option:hover {
+    background: var(--hover-color);
+}
+
+.language-option:last-child {
+    border-bottom: none;
+}
+
+.language-option.selected {
+    background: var(--primary-color);
+    color: white;
+}
+
+.language-info {
+    display: flex;
+    align-items: center;
+}
+
+.language-info .flag {
+    margin-right: 0.5rem;
+    font-size: 1.2rem;
+}
+
+.language-info .name {
+    font-weight: 500;
+}
+
+.language-usage {
+    font-size: 0.875rem;
+    color: var(--text-color-secondary);
+    opacity: 0.7;
+}
+
+.language-selected-display {
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-color-light);
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    margin-top: 0.5rem;
+}
+
+.language-selected-display .flag {
+    margin-right: 0.5rem;
+    font-size: 1.2rem;
+}
+
+.language-selected-display .name {
+    font-weight: 500;
+}
+
+.language-search-container.active input[type="text"] {
+    border-radius: 4px 4px 0 0;
+}
+
+.language-search-container.active .language-dropdown {
+    display: block;
+}
+
+.language-search-container.active .language-selected-display {
+    display: none;
+}
+
+/* Major language indicator */
+.language-option.major {
+    background: rgba(255, 133, 27, 0.05);
+}
+
+.language-option.major .language-info .name::after {
+    content: " ★";
+    color: var(--primary-color);
+    margin-left: 0.25rem;
+}
+
+/* No results message */
+.language-no-results {
+    padding: 1rem;
+    text-align: center;
+    color: var(--text-color-secondary);
+    font-style: italic;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initializeLanguagePicker();
+});
+
+// Also initialize after HTMX swaps for modal forms
+document.addEventListener('htmx:afterSwap', function() {
+    initializeLanguagePicker();
+});
+
+function initializeLanguagePicker() {
+    const container = document.getElementById('language-picker-enhanced');
+    if (!container) return;
+
+    const searchInput = document.getElementById('language-search');
+    const hiddenInput = document.getElementById('language-selected');
+    const dropdown = document.getElementById('language-dropdown');
+    const optionsContainer = document.getElementById('language-options');
+    const selectedDisplay = document.getElementById('language-selected-display');
+    const searchContainer = searchInput.parentElement;
+
+    let languages = [];
+    let isLoading = false;
+
+    // Load initial languages
+    loadLanguages('');
+
+    // Handle search input
+    let searchTimeout;
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            const query = this.value.trim();
+            loadLanguages(query);
+        }, 300);
+    });
+
+    // Handle focus/blur
+    searchInput.addEventListener('focus', function() {
+        searchContainer.classList.add('active');
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!container.contains(e.target)) {
+            searchContainer.classList.remove('active');
+        }
+    });
+
+    // Handle selected display click
+    selectedDisplay.addEventListener('click', function() {
+        searchContainer.classList.add('active');
+        searchInput.focus();
+    });
+
+    function loadLanguages(query) {
+        if (isLoading) return;
+        isLoading = true;
+
+        const url = query ? 
+            `/api/languages/search?q=${encodeURIComponent(query)}` : 
+            '/api/languages';
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                languages = data;
+                renderLanguageOptions();
+            })
+            .catch(error => {
+                console.error('Error loading languages:', error);
+                optionsContainer.innerHTML = '<div class="language-no-results">Error loading languages</div>';
+            })
+            .finally(() => {
+                isLoading = false;
+            });
+    }
+
+    function renderLanguageOptions() {
+        if (languages.length === 0) {
+            optionsContainer.innerHTML = '<div class="language-no-results">No languages found</div>';
+            return;
+        }
+
+        const currentValue = hiddenInput.value;
+        
+        optionsContainer.innerHTML = languages.map(lang => {
+            const isSelected = lang.code === currentValue;
+            const majorClass = lang.is_major ? ' major' : '';
+            const selectedClass = isSelected ? ' selected' : '';
+            
+            return `
+                <div class="language-option${majorClass}${selectedClass}" data-code="${lang.code}">
+                    <div class="language-info">
+                        <span class="flag">${lang.flag_emoji || '🏳️'}</span>
+                        <span class="name">${lang.name_native}</span>
+                    </div>
+                    ${lang.usage_count > 0 ? `<span class="language-usage">${lang.usage_count} pitches</span>` : ''}
+                </div>
+            `;
+        }).join('');
+
+        // Add click handlers
+        optionsContainer.querySelectorAll('.language-option').forEach(option => {
+            option.addEventListener('click', function() {
+                const code = this.dataset.code;
+                const lang = languages.find(l => l.code === code);
+                selectLanguage(lang);
+            });
+        });
+    }
+
+    function selectLanguage(lang) {
+        hiddenInput.value = lang.code;
+        searchInput.value = '';
+        
+        // Update selected display
+        selectedDisplay.innerHTML = `
+            <span class="flag">${lang.flag_emoji || '🏳️'}</span>
+            <span class="name">${lang.name_native}</span>
+        `;
+
+        // Close dropdown
+        searchContainer.classList.remove('active');
+    }
+
+    // Initialize selected display if we have a pre-selected language
+    if (hiddenInput.value) {
+        loadLanguages('').then(() => {
+            const selectedLang = languages.find(l => l.code === hiddenInput.value);
+            if (selectedLang) {
+                selectedDisplay.innerHTML = `
+                    <span class="flag">${selectedLang.flag_emoji || '🏳️'}</span>
+                    <span class="name">${selectedLang.name_native}</span>
+                `;
+            }
+        });
+    }
+}
+</script> 

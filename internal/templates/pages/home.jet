@@ -1,0 +1,254 @@
+{{ extends "../layouts/base.jet" }}
+
+{{ block title() }}BitcoinPitch.org – Pick your pitch{{ end }}
+
+{{ block description() }}Sometimes we wonder what to say when asked what Bitcoin is. A platform for collecting and sharing Bitcoin-related pitches.{{ end }}
+
+{{ block main() }}
+
+<!-- Active Filters Display -->
+{{ if TagFilter || LengthFilter || AuthorFilter || LanguageFilter }}
+<div class="active-filters">
+  <span class="filters-label">Active filters:</span>
+  <div class="filter-tags">
+    {{ if TagFilter }}
+      <span class="filter-tag">
+        Tag: {{ TagFilter }}
+        <button type="button" onclick="removeFilter('tag')" class="remove-filter" aria-label="Remove tag filter">&times;</button>
+      </span>
+    {{ end }}
+    {{ if LengthFilter }}
+      <span class="filter-tag">
+        Length: {{ LengthFilter }}
+        <button type="button" onclick="removeFilter('length')" class="remove-filter" aria-label="Remove length filter">&times;</button>
+      </span>
+    {{ end }}
+    {{ if AuthorFilter }}
+      <span class="filter-tag">
+        Author: {{ AuthorFilter }}
+        <button type="button" onclick="removeFilter('author')" class="remove-filter" aria-label="Remove author filter">&times;</button>
+      </span>
+    {{ end }}
+    {{ if LanguageFilter }}
+      <span class="filter-tag">
+        Language: {{ LanguageFilter }}
+        <button type="button" onclick="removeFilter('language')" class="remove-filter" aria-label="Remove language filter">&times;</button>
+      </span>
+    {{ end }}
+    <button type="button" onclick="clearAllFilters()" class="clear-all-filters">Clear All</button>
+  </div>
+</div>
+{{ end }}
+
+<!-- Pagination Controls Top -->
+{{ if PaginationConfig.ShowTotalCount }}
+<div class="pagination-controls top">
+  <div class="total-count">
+    Showing {{ PageSize }} of {{ TotalPitches }} pitches
+    {{ if CurrentPage > 1 || TotalPages > 1 }}
+      (Page {{ CurrentPage }} of {{ TotalPages }})
+    {{ end }}
+  </div>
+  
+  {{ if PaginationConfig.ShowPageSizeSelector }}
+  <div class="page-size-selector">
+    <label for="page-size">Pitches per page:</label>
+    <select id="page-size" onchange="changePageSize(this.value)">
+      {{ range PaginationConfig.PageSizeOptions }}
+        <option value="{{ . }}" {{ if . == PageSize }}selected{{ end }}>{{ . }}</option>
+      {{ end }}
+    </select>
+  </div>
+  {{ end }}
+</div>
+{{ end }}
+
+<!-- Tab panes -->
+<section id="bitcoin" class="tab-content active">
+  <div id="bitcoin-pitch-list" class="pitch-list">
+  {{ range bitcoinPitches }}
+    {{ include "../partials/pitch-card.jet" . }}
+  {{ end }}
+  
+  {{ if len(bitcoinPitches) == 0 }}
+    <div class="empty-state">
+      <div class="empty-icon">📝</div>
+      <h2>No Bitcoin pitches found</h2>
+      <p>{{ if TagFilter || LengthFilter || AuthorFilter || LanguageFilter }}
+        No pitches match your current filters. Try removing some filters to see more results.
+      {{ else }}
+        Be the first to add a Bitcoin pitch!
+      {{ end }}</p>
+      <button class="button primary" hx-get="/pitch/form" hx-target="#pitch-form-modal .modal-content">
+        Add Your Pitch
+      </button>
+    </div>
+  {{ end }}
+  </div>
+</section>
+
+<section id="lightning" class="tab-content">
+  <div id="lightning-pitch-list" class="pitch-list">
+  {{ range lightningPitches }}
+    {{ include "../partials/pitch-card.jet" . }}
+  {{ end }}
+  
+  {{ if len(lightningPitches) == 0 }}
+    <div class="empty-state">
+      <div class="empty-icon">⚡</div>
+      <h2>No Lightning pitches found</h2>
+      <p>{{ if TagFilter || LengthFilter || AuthorFilter || LanguageFilter }}
+        No pitches match your current filters. Try removing some filters to see more results.
+      {{ else }}
+        Be the first to add a Lightning pitch!
+      {{ end }}</p>
+      <button class="button primary" hx-get="/pitch/form" hx-target="#pitch-form-modal .modal-content">
+        Add Your Pitch
+      </button>
+    </div>
+  {{ end }}
+  </div>
+</section>
+
+<section id="cashu" class="tab-content">
+  <div id="cashu-pitch-list" class="pitch-list">
+  {{ range cashuPitches }}
+    {{ include "../partials/pitch-card.jet" . }}
+  {{ end }}
+  
+  {{ if len(cashuPitches) == 0 }}
+    <div class="empty-state">
+      <div class="empty-icon">🥜</div>
+      <h2>No Cashu pitches found</h2>
+      <p>{{ if TagFilter || LengthFilter || AuthorFilter || LanguageFilter }}
+        No pitches match your current filters. Try removing some filters to see more results.
+      {{ else }}
+        Be the first to add a Cashu pitch!
+      {{ end }}</p>
+      <button class="button primary" hx-get="/pitch/form" hx-target="#pitch-form-modal .modal-content">
+        Add Your Pitch
+      </button>
+    </div>
+  {{ end }}
+  </div>
+</section>
+
+<!-- Pagination Controls Bottom -->
+{{ if TotalPages > 1 }}
+  <div class="pagination bottom">
+    <div class="pagination-info">
+      <span>Page {{ CurrentPage }} of {{ TotalPages }}</span>
+    </div>
+    
+    <div class="pagination-buttons">
+      {{ if CurrentPage > 1 }}
+        <a href="{{ buildPaginationURL(1, PageSize) }}" 
+           class="page-btn first" 
+           onclick="goToPage(1, {{ PageSize }}); return false;">
+          ⟪ First
+        </a>
+        <a href="{{ buildPaginationURL(CurrentPage - 1, PageSize) }}" 
+           class="page-btn prev" 
+           onclick="goToPage({{ CurrentPage - 1 }}, {{ PageSize }}); return false;">
+          ⟨ Previous
+        </a>
+      {{ end }}
+      
+      <!-- Page numbers (show 5 around current) -->
+      {{ if CurrentPage > 3 }}
+        <span class="page-ellipsis">…</span>
+      {{ end }}
+      
+      {{ range page := iter(1, TotalPages) }}
+        {{ if page >= max(1, sub(CurrentPage, 2)) && page <= min(TotalPages, add(CurrentPage, 2)) }}
+          {{ if page == CurrentPage }}
+            <span class="page-btn current">{{ page }}</span>
+          {{ else }}
+            <a href="{{ buildPaginationURL(page, PageSize) }}" 
+               class="page-btn" 
+               onclick="goToPage({{ page }}, {{ PageSize }}); return false;">
+              {{ page }}
+            </a>
+          {{ end }}
+        {{ end }}
+      {{ end }}
+      
+      {{ if CurrentPage < sub(TotalPages, 2) }}
+        <span class="page-ellipsis">…</span>
+      {{ end }}
+      
+      {{ if CurrentPage < TotalPages }}
+        <a href="{{ buildPaginationURL(CurrentPage + 1, PageSize) }}" 
+           class="page-btn next" 
+           onclick="goToPage({{ CurrentPage + 1 }}, {{ PageSize }}); return false;">
+          Next ⟩
+        </a>
+        <a href="{{ buildPaginationURL(TotalPages, PageSize) }}" 
+           class="page-btn last" 
+           onclick="goToPage({{ TotalPages }}, {{ PageSize }}); return false;">
+          Last ⟫
+        </a>
+      {{ end }}
+    </div>
+  </div>
+{{ end }}
+
+<!-- Pitch Form Modal Container -->
+<div id="pitch-form-modal" class="modal">
+    <div class="modal-content"></div>
+</div>
+
+<!-- Delete Confirmation Modal Container -->
+<div id="delete-confirm-modal" class="modal">
+    <div class="modal-content"></div>
+</div>
+{{ end }}
+
+{{ block scripts() }}
+<script src="/static/js/main.js" defer></script>
+<script src="/static/js/tutorial-i18n.js" defer onerror="console.error('Tutorial i18n script failed to load')"></script>
+<script src="/static/js/tutorial.js" defer onerror="console.error('Tutorial script failed to load')"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Print DB connection status
+    if ({{ if DbConnected }}true{{ else }}false{{ end }}) {
+        console.log('Connection to db successful');
+    }
+});
+
+// Pagination functions for homepage
+function changePageSize(size) {
+    const url = new URL(window.location);
+    url.searchParams.set('size', size);
+    url.searchParams.set('page', '1'); // Reset to first page when changing size
+    window.location.href = url.toString();
+}
+
+function goToPage(page, size) {
+    const url = new URL(window.location);
+    url.searchParams.set('page', page);
+    if (size) {
+        url.searchParams.set('size', size);
+    }
+    window.location.href = url.toString();
+}
+
+// Filter management functions
+function removeFilter(filterType) {
+    const url = new URL(window.location);
+    url.searchParams.delete(filterType);
+    url.searchParams.set('page', '1'); // Reset to first page when filtering
+    window.location.href = url.toString();
+}
+
+function clearAllFilters() {
+    const url = new URL(window.location);
+    url.searchParams.delete('tag');
+    url.searchParams.delete('length');
+    url.searchParams.delete('author');
+    url.searchParams.delete('language');
+    url.searchParams.set('page', '1');
+    window.location.href = url.toString();
+}
+</script>
+{{ end }} 
