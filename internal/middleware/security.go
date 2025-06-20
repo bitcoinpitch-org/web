@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"log"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -176,15 +177,21 @@ func SecurityMiddleware(app *fiber.App) {
 	// Rate limiting - configurable via environment
 	maxRequests := 100 // default
 	if max := os.Getenv("RATE_LIMIT_MAX"); max != "" {
-		if parsed, err := strconv.ParseInt(max, 10, 64); err == nil {
-			maxRequests = int(parsed)
+		if parsed, err := strconv.ParseInt(max, 10, 32); err == nil {
+			// SECURITY: Add bounds checking for integer conversion
+			if parsed > 0 && parsed <= math.MaxInt32 {
+				maxRequests = int(parsed)
+			}
 		}
 	}
 
 	expiration := 60 // default 1 minute
 	if exp := os.Getenv("RATE_LIMIT_EXPIRATION"); exp != "" {
-		if parsed, err := strconv.ParseInt(exp, 10, 64); err == nil {
-			expiration = int(parsed)
+		if parsed, err := strconv.ParseInt(exp, 10, 32); err == nil {
+			// SECURITY: Add bounds checking for integer conversion
+			if parsed > 0 && parsed <= math.MaxInt32 {
+				expiration = int(parsed)
+			}
 		}
 	}
 

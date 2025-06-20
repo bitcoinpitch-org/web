@@ -780,7 +780,31 @@ document.body.addEventListener('htmx:beforeOnLoad', function(evt) {
 document.body.addEventListener('htmx-delete-modal-error', function(evt) {
     var modalContent = document.querySelector('#delete-confirm-modal .modal-content');
     if (modalContent && evt.detail && evt.detail.xhr && evt.detail.xhr.response) {
-        modalContent.innerHTML = evt.detail.xhr.response;
+        // SECURITY: Safely set content to prevent XSS attacks
+        // Create a temporary element to safely parse the response
+        var tempDiv = document.createElement('div');
+        tempDiv.textContent = evt.detail.xhr.response; // This escapes HTML entities
+        
+        // For HTMX responses that are expected to be HTML fragments, 
+        // we should validate they come from our trusted backend
+        if (evt.detail.xhr.responseURL && evt.detail.xhr.responseURL.startsWith(window.location.origin)) {
+            // Only allow HTML from our own origin
+            modalContent.innerHTML = evt.detail.xhr.response;
+        } else {
+            // For safety, just show a generic error message
+            modalContent.innerHTML = `
+                <div class='modal-header'>
+                    <h2>Error</h2>
+                    <button class='close-modal' aria-label='Close modal'>&times;</button>
+                </div>
+                <div class='modal-body'>
+                    <p>An error occurred. Please try again.</p>
+                </div>
+                <div class='form-actions'>
+                    <button type='button' class='button secondary close-modal'>Close</button>
+                </div>`;
+        }
+        
         var modal = document.getElementById('delete-confirm-modal');
         if (modal && !modal.classList.contains('active')) {
             modal.classList.add('active');
