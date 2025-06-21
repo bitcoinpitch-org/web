@@ -295,16 +295,10 @@ async function showMobileNostrOptions() {
       </div>
       
       <div class="mobile-nostr-method">
-        <button onclick="showNpubInput()" class="button secondary">
-          🏷️ Enter Your Public Key (npub)
-        </button>
-        <small>Read-only mode - you can browse but not create pitches</small>
-      </div>
-      
-      <div class="mobile-nostr-method">
         <button onclick="closeAuthModal()" class="button ghost">
           ❌ Cancel
         </button>
+        <small>Browse without logging in - no authentication needed to view pitches</small>
       </div>
     </div>
   `;
@@ -342,29 +336,6 @@ function showManualKeyInput() {
       console.error('Manual key input field not found after DOM update');
     }
   }, 100);
-}
-
-function showNpubInput() {
-  const authResult = document.getElementById('auth-result');
-  authResult.innerHTML = `
-    <div class="npub-input">
-      <h3>Public Key Authentication</h3>
-      <p>Enter your public key (npub format) for read-only access:</p>
-      
-      <form onsubmit="handleNpubAuth(event)">
-        <div class="form-group">
-          <label for="npub-key">Public Key (npub format):</label>
-          <input type="text" id="npub-key" placeholder="npub1..." maxlength="63" required>
-          <small>This should start with "npub1" and be 63 characters total</small>
-        </div>
-        
-        <div class="form-actions">
-          <button type="submit" class="button primary">Continue (Read-Only)</button>
-          <button type="button" onclick="showMobileNostrOptions()" class="button secondary">Back</button>
-        </div>
-      </form>
-    </div>
-  `;
 }
 
 async function handleManualKeyAuth(event) {
@@ -457,43 +428,6 @@ async function handleManualKeyAuth(event) {
       submitButton.textContent = 'Sign In';
       submitButton.disabled = false;
     }
-  }
-}
-
-async function handleNpubAuth(event) {
-  event.preventDefault();
-  
-  const npub = document.getElementById('npub-key').value.trim();
-  
-  // Basic validation
-  if (!/^npub1[a-zA-Z0-9]{58}$/.test(npub)) {
-    showAuthError('Invalid npub format. Must start with "npub1" and be 63 characters total.');
-    return;
-  }
-  
-  try {
-    // Send npub to backend for read-only authentication
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-    const response = await fetch('/auth/nostr-readonly', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': csrfToken
-      },
-      body: JSON.stringify({
-        npub: npub
-      })
-    });
-
-    if (response.ok) {
-      showAuthError('Read-only authentication successful! You can browse but cannot create content.');
-      setTimeout(() => window.location.reload(), 2000);
-    } else {
-      const error = await response.json();
-      showAuthError(error.error || 'Read-only authentication failed');
-    }
-  } catch (error) {
-    showAuthError('Read-only authentication failed: ' + error.message);
   }
 }
 
