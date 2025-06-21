@@ -169,6 +169,8 @@ func SetupRoutes(app *fiber.App, view *jet.Set, repo *database.Repository, confi
 	authGroup.Post("/password", handlers.AuthPasswordHandler)
 	authGroup.Post("/trezor", handlers.AuthTrezorHandler)
 	authGroup.Post("/nostr", handlers.AuthNostrHandler)
+	authGroup.Post("/nostr-readonly", handlers.AuthNostrReadOnlyHandler)
+	authGroup.Post("/nostr-manual", handlers.AuthNostrManualHandler)
 	// authGroup.Post("/twitter", handlers.AuthTwitterHandler) // DISABLED
 	authGroup.Post("/logout", handlers.AuthLogoutHandler)
 

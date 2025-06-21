@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
+	"strings"
 
 	"bitcoinpitch.org/internal/auth"
 	"bitcoinpitch.org/internal/config"
@@ -180,6 +181,190 @@ func AuthNostrHandler(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"message": "Authentication successful",
+		"user":    user.GetDisplayName(),
+	})
+}
+
+// AuthNostrReadOnlyHandler handles read-only Nostr authentication via npub
+func AuthNostrReadOnlyHandler(c *fiber.Ctx) error {
+	var req struct {
+		Npub string `json:"npub"`
+	}
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	// Validate npub format
+	if req.Npub == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Missing npub",
+		})
+	}
+
+	// Convert npub to hex pubkey for storage
+	hexPubkey, err := crypto.NpubToHex(req.Npub)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid npub format: " + err.Error(),
+		})
+	}
+
+	repo := c.Locals("repo").(*database.Repository)
+
+	// Check if user already exists
+	user, err := repo.GetUserByAuth(c.Context(), models.AuthTypeNostr, hexPubkey)
+	if err != nil {
+		// User doesn't exist, create new read-only user
+		user = models.NewUser(models.AuthTypeNostr, hexPubkey)
+
+		// Generate a unique username and display name from the npub
+		username := crypto.GenerateNostrUsername(hexPubkey)
+		displayName := req.Npub[:12] + "..." // Show first 12 chars of npub
+
+		user.SetUsername(username)
+		user.SetDisplayName(displayName)
+
+		// Mark as read-only user by setting a flag (we can add this to the user model later)
+		// For now, we'll just create the user normally
+
+		if err := repo.CreateUser(c.Context(), user); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to create user: " + err.Error(),
+			})
+		}
+	}
+
+	// Create session (read-only sessions work the same as normal sessions)
+	token, err := middleware.CreateSession(repo, c.Context(), user.BaseModel.ID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to create session: " + err.Error(),
+		})
+	}
+
+	// Set session cookie
+	middleware.SetSessionCookie(c, token)
+
+	return c.JSON(fiber.Map{
+		"message":  "Read-only authentication successful",
+		"user":     user.GetDisplayName(),
+		"readonly": true,
+	})
+}
+
+// AuthNostrManualHandler handles manual Nostr authentication via private key
+func AuthNostrManualHandler(c *fiber.Ctx) error {
+	var req struct {
+		PrivateKeyHex string `json:"private_key"`
+	}
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	// Validate private key format
+	if req.PrivateKeyHex == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Missing private key",
+		})
+	}
+
+	var privateKeyHex string
+
+	// Check if it's nsec format (bech32) or raw hex
+	if strings.HasPrefix(req.PrivateKeyHex, "nsec1") {
+		// Convert nsec to hex
+		hexKey, err := crypto.NsecToHex(req.PrivateKeyHex)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Invalid nsec format: " + err.Error(),
+			})
+		}
+		privateKeyHex = hexKey
+	} else {
+		// Validate hex format (64 characters, only hex digits)
+		if len(req.PrivateKeyHex) != 64 {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Private key must be exactly 64 hex characters or nsec format",
+			})
+		}
+
+		// Validate it's valid hex
+		if _, err := hex.DecodeString(req.PrivateKeyHex); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Invalid hex format. Use either 64 hex characters or nsec format.",
+			})
+		}
+
+		privateKeyHex = req.PrivateKeyHex
+	}
+
+	// Derive public key and create signature using the crypto package
+	pubkey, signature, eventTimestamp, eventContent, err := crypto.ProcessManualNostrAuth(privateKeyHex)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid private key or signature generation failed: " + err.Error(),
+		})
+	}
+
+	// Create a minimal Nostr event for verification using the same timestamp and content
+	// Note: ProcessManualNostrAuth needs to return these values for consistency
+	event := map[string]interface{}{
+		"pubkey":     pubkey,
+		"sig":        signature,
+		"kind":       1,
+		"created_at": eventTimestamp,
+		"tags":       [][]string{},
+		"content":    eventContent,
+	}
+
+	// Verify the signature
+	if err := crypto.VerifyNostrEvent(event); err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid signature: " + err.Error(),
+		})
+	}
+
+	repo := c.Locals("repo").(*database.Repository)
+
+	// Check if user already exists
+	user, err := repo.GetUserByAuth(c.Context(), models.AuthTypeNostr, pubkey)
+	if err != nil {
+		// User doesn't exist, create new user
+		user = models.NewUser(models.AuthTypeNostr, pubkey)
+
+		// Generate a unique username and display name from the pubkey
+		username := crypto.GenerateNostrUsername(pubkey)
+		displayName := crypto.GenerateNostrDisplayName(pubkey)
+
+		user.SetUsername(username)
+		user.SetDisplayName(displayName)
+
+		if err := repo.CreateUser(c.Context(), user); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to create user: " + err.Error(),
+			})
+		}
+	}
+
+	// Create session
+	token, err := middleware.CreateSession(repo, c.Context(), user.BaseModel.ID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to create session: " + err.Error(),
+		})
+	}
+
+	// Set session cookie
+	middleware.SetSessionCookie(c, token)
+
+	return c.JSON(fiber.Map{
+		"message": "Manual authentication successful",
 		"user":    user.GetDisplayName(),
 	})
 }

@@ -7,7 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"time"
 
+	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/btcsuite/btcd/btcutil/bech32"
 )
@@ -49,41 +51,71 @@ func ValidateNostrNpub(npub string) error {
 }
 
 // VerifyNostrEvent verifies a Nostr event signature
-func VerifyNostrEvent(event map[string]interface{}) error {
-	// Convert to our struct for easier handling
-	eventBytes, err := json.Marshal(event)
+func VerifyNostrEvent(event interface{}) error {
+	eventMap := event.(map[string]interface{})
+
+	// Extract required fields
+	pubkeyStr, ok := eventMap["pubkey"].(string)
+	if !ok {
+		return fmt.Errorf("missing or invalid pubkey")
+	}
+
+	signatureStr, ok := eventMap["sig"].(string)
+	if !ok {
+		return fmt.Errorf("missing or invalid signature")
+	}
+
+	// Parse signature
+	sigBytes, err := hex.DecodeString(signatureStr)
 	if err != nil {
-		return fmt.Errorf("failed to marshal event: %v", err)
+		return fmt.Errorf("failed to decode signature: %v", err)
 	}
 
-	var nostrEvent NostrEvent
-	if err := json.Unmarshal(eventBytes, &nostrEvent); err != nil {
-		return fmt.Errorf("failed to unmarshal event: %v", err)
+	// Parse signature as Schnorr (64 bytes for Nostr)
+	sig, err := schnorr.ParseSignature(sigBytes)
+	if err != nil {
+		return fmt.Errorf("failed to parse signature: %v", err)
 	}
 
-	// Validate required fields
-	if nostrEvent.PubKey == "" {
-		return errors.New("missing pubkey")
-	}
-	if nostrEvent.Sig == "" {
-		return errors.New("missing signature")
+	// Parse pubkey (32 bytes for x-only pubkey)
+	pubkeyBytes, err := hex.DecodeString(pubkeyStr)
+	if err != nil {
+		return fmt.Errorf("failed to decode pubkey: %v", err)
 	}
 
-	// Validate pubkey format
-	if err := ValidateNostrPubkey(nostrEvent.PubKey); err != nil {
-		return fmt.Errorf("invalid pubkey: %v", err)
+	if len(pubkeyBytes) != 32 {
+		return fmt.Errorf("malformed public key: invalid length: %d", len(pubkeyBytes))
 	}
 
-	// Create the event ID (hash of serialized event)
-	eventID := createNostrEventID(nostrEvent)
-
-	// If ID is provided, verify it matches
-	if nostrEvent.ID != "" && nostrEvent.ID != eventID {
-		return errors.New("event ID mismatch")
+	// Parse as x-only public key (Schnorr format)
+	pubKey, err := schnorr.ParsePubKey(pubkeyBytes)
+	if err != nil {
+		return fmt.Errorf("failed to parse public key: %v", err)
 	}
 
-	// Verify the signature
-	return verifyNostrSignature(eventID, nostrEvent.Sig, nostrEvent.PubKey)
+	// Create event serialization for verification
+	eventData := []interface{}{
+		0,
+		eventMap["pubkey"],
+		eventMap["created_at"],
+		eventMap["kind"],
+		eventMap["tags"],
+		eventMap["content"],
+	}
+
+	eventBytes, err := json.Marshal(eventData)
+	if err != nil {
+		return fmt.Errorf("failed to serialize event: %v", err)
+	}
+
+	eventHash := sha256.Sum256(eventBytes)
+
+	// Verify signature
+	if !sig.Verify(eventHash[:], pubKey) {
+		return fmt.Errorf("signature verification failed")
+	}
+
+	return nil
 }
 
 // createNostrEventID creates the event ID by hashing the serialized event
@@ -106,55 +138,6 @@ func createNostrEventID(event NostrEvent) string {
 	return hex.EncodeToString(hash[:])
 }
 
-// verifyNostrSignature verifies a Schnorr signature for a Nostr event
-func verifyNostrSignature(eventID, signature, pubkey string) error {
-	// Decode the event ID (32 bytes)
-	eventIDBytes, err := hex.DecodeString(eventID)
-	if err != nil {
-		return fmt.Errorf("invalid event ID hex: %v", err)
-	}
-	if len(eventIDBytes) != 32 {
-		return errors.New("event ID must be 32 bytes")
-	}
-
-	// Decode the signature (64 bytes)
-	sigBytes, err := hex.DecodeString(signature)
-	if err != nil {
-		return fmt.Errorf("invalid signature hex: %v", err)
-	}
-	if len(sigBytes) != 64 {
-		return errors.New("signature must be 64 bytes")
-	}
-
-	// Decode the public key (32 bytes)
-	pubkeyBytes, err := hex.DecodeString(pubkey)
-	if err != nil {
-		return fmt.Errorf("invalid pubkey hex: %v", err)
-	}
-	if len(pubkeyBytes) != 32 {
-		return errors.New("pubkey must be 32 bytes")
-	}
-
-	// Parse the public key
-	pubKey, err := schnorr.ParsePubKey(pubkeyBytes)
-	if err != nil {
-		return fmt.Errorf("failed to parse public key: %v", err)
-	}
-
-	// Parse the signature
-	sig, err := schnorr.ParseSignature(sigBytes)
-	if err != nil {
-		return fmt.Errorf("failed to parse signature: %v", err)
-	}
-
-	// Verify the signature
-	if !sig.Verify(eventIDBytes, pubKey) {
-		return errors.New("signature verification failed")
-	}
-
-	return nil
-}
-
 // ExtractPubkeyFromEvent extracts the public key from a Nostr event
 func ExtractPubkeyFromEvent(event map[string]interface{}) (string, error) {
 	pubkey, ok := event["pubkey"].(string)
@@ -171,55 +154,41 @@ func ExtractPubkeyFromEvent(event map[string]interface{}) (string, error) {
 
 // GenerateNostrDisplayName creates a readable display name from a Nostr pubkey
 func GenerateNostrDisplayName(pubkey string) string {
-	// Convert to npub format and show first 12 characters
-	npub, err := HexToNpub(pubkey)
-	if err != nil {
-		// Fallback to old format if conversion fails
-		if len(pubkey) >= 8 {
-			return "nostr_" + pubkey[:8]
-		}
-		return "nostr_user"
+	// Use first 12 characters with npub prefix
+	if len(pubkey) >= 12 {
+		return "npub1" + pubkey[:12] + "..."
 	}
-
-	// Show first 12 characters of npub (npub1 + 8 chars)
-	if len(npub) >= 12 {
-		return npub[:12] + "..."
-	}
-	return npub
+	return "npub1" + pubkey + "..."
 }
 
 // GenerateNostrUsername creates a unique username from a Nostr pubkey
 func GenerateNostrUsername(pubkey string) string {
-	// Convert to npub format for username
-	npub, err := HexToNpub(pubkey)
-	if err != nil {
-		// Fallback to first 12 characters of pubkey for username uniqueness
-		if len(pubkey) >= 12 {
-			return pubkey[:12]
-		}
-		return pubkey
+	// Use first 8 characters of pubkey with nostr_ prefix
+	if len(pubkey) >= 8 {
+		return "nostr_" + pubkey[:8]
 	}
-	return npub
+	return "nostr_" + pubkey
 }
 
 // HexToNpub converts a hex pubkey to npub (bech32) format
 func HexToNpub(hexPubkey string) (string, error) {
-	// Decode hex pubkey
+	// Decode hex
 	pubkeyBytes, err := hex.DecodeString(hexPubkey)
 	if err != nil {
-		return "", fmt.Errorf("invalid hex pubkey: %v", err)
+		return "", fmt.Errorf("failed to decode hex: %v", err)
 	}
 
 	if len(pubkeyBytes) != 32 {
-		return "", errors.New("pubkey must be 32 bytes")
+		return "", fmt.Errorf("pubkey must be 32 bytes")
 	}
 
-	// Convert to bech32 with "npub" prefix
+	// Convert to 5-bit for bech32
 	converted, err := bech32.ConvertBits(pubkeyBytes, 8, 5, true)
 	if err != nil {
 		return "", fmt.Errorf("failed to convert bits: %v", err)
 	}
 
+	// Encode as bech32
 	npub, err := bech32.Encode("npub", converted)
 	if err != nil {
 		return "", fmt.Errorf("failed to encode bech32: %v", err)
@@ -228,11 +197,126 @@ func HexToNpub(hexPubkey string) (string, error) {
 	return npub, nil
 }
 
-// GetFullNpub returns the full npub for use in tooltips or full display
-func GetFullNpub(pubkey string) string {
-	npub, err := HexToNpub(pubkey)
+// NpubToHex converts a npub (bech32) format to hex format
+func NpubToHex(npub string) (string, error) {
+	// Decode bech32
+	hrp, data, err := bech32.Decode(npub)
 	if err != nil {
-		return pubkey // fallback to hex if conversion fails
+		return "", fmt.Errorf("failed to decode bech32: %v", err)
+	}
+
+	if hrp != "npub" {
+		return "", fmt.Errorf("invalid hrp, expected 'npub', got '%s'", hrp)
+	}
+
+	// Convert from 5-bit to 8-bit
+	converted, err := bech32.ConvertBits(data, 5, 8, false)
+	if err != nil {
+		return "", fmt.Errorf("failed to convert bits: %v", err)
+	}
+
+	if len(converted) != 32 {
+		return "", fmt.Errorf("invalid pubkey length: %d", len(converted))
+	}
+
+	return hex.EncodeToString(converted), nil
+}
+
+// NsecToHex converts a nsec (bech32) format to hex format
+func NsecToHex(nsec string) (string, error) {
+	// Decode bech32
+	hrp, data, err := bech32.Decode(nsec)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode bech32: %v", err)
+	}
+
+	if hrp != "nsec" {
+		return "", fmt.Errorf("invalid hrp, expected 'nsec', got '%s'", hrp)
+	}
+
+	// Convert from 5-bit to 8-bit
+	converted, err := bech32.ConvertBits(data, 5, 8, false)
+	if err != nil {
+		return "", fmt.Errorf("failed to convert bits: %v", err)
+	}
+
+	if len(converted) != 32 {
+		return "", fmt.Errorf("invalid private key length: %d", len(converted))
+	}
+
+	return hex.EncodeToString(converted), nil
+}
+
+// ProcessManualNostrAuth processes manual authentication with private key
+func ProcessManualNostrAuth(privateKeyHex string) (pubkey string, signature string, timestamp int64, message string, err error) {
+	// Validate hex format
+	if len(privateKeyHex) != 64 {
+		return "", "", 0, "", fmt.Errorf("private key must be exactly 64 hex characters")
+	}
+
+	// Parse hex private key
+	privateKeyBytes, err := hex.DecodeString(privateKeyHex)
+	if err != nil {
+		return "", "", 0, "", fmt.Errorf("invalid hex format: %v", err)
+	}
+
+	if len(privateKeyBytes) != 32 {
+		return "", "", 0, "", fmt.Errorf("private key must be 32 bytes")
+	}
+
+	// Derive public key from private key (Nostr uses x-only public keys)
+	privKey, pubKey := btcec.PrivKeyFromBytes(privateKeyBytes)
+
+	// Nostr uses x-only public keys (32 bytes, not 33)
+	pubkeyBytes := pubKey.SerializeCompressed()
+	if len(pubkeyBytes) != 33 {
+		return "", "", 0, "", fmt.Errorf("invalid public key length")
+	}
+
+	// Remove the first byte (compression flag) to get x-only pubkey
+	pubkey = hex.EncodeToString(pubkeyBytes[1:])
+
+	// Create event data (timestamp for uniqueness)
+	timestamp = time.Now().Unix()
+	message = fmt.Sprintf("BitcoinPitch Authentication: %d", timestamp)
+
+	// Create event data structure for signing (Nostr NIP-01 format)
+	// This must match exactly what VerifyNostrEvent will reconstruct
+	eventData := []interface{}{
+		0,            // reserved
+		pubkey,       // pubkey
+		timestamp,    // created_at
+		1,            // kind
+		[][]string{}, // tags
+		message,      // content
+	}
+
+	// Serialize event data for signing
+	eventBytes, err := json.Marshal(eventData)
+	if err != nil {
+		return "", "", 0, "", fmt.Errorf("failed to serialize event: %v", err)
+	}
+
+	// Hash the serialized event (Nostr event ID)
+	eventHash := sha256.Sum256(eventBytes)
+
+	// Sign the hash using Schnorr signature (correct for Nostr)
+	sig, err := schnorr.Sign(privKey, eventHash[:])
+	if err != nil {
+		return "", "", 0, "", fmt.Errorf("failed to create signature: %v", err)
+	}
+
+	// Convert signature to hex format (Schnorr signatures are 64 bytes)
+	signature = hex.EncodeToString(sig.Serialize())
+
+	return pubkey, signature, timestamp, message, nil
+}
+
+// GetFullNpub returns the full npub for use in tooltips or full display
+func GetFullNpub(hexPubkey string) string {
+	npub, err := HexToNpub(hexPubkey)
+	if err != nil {
+		return hexPubkey[:12] + "..." // fallback to hex
 	}
 	return npub
 }

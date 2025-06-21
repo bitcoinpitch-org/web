@@ -98,6 +98,12 @@ function closeAuthModal() {
   document.querySelector('.auth-modal').style.display = 'none';
 }
 
+function showAuthError(message) {
+  const authResult = document.getElementById('auth-result');
+  authResult.innerHTML = '<div class="auth-error">' + message + '</div>';
+  console.log('Auth error shown:', message);
+}
+
 function togglePasswordAuth() {
   const passwordAuth = document.getElementById('password-auth');
   const toggle = document.querySelector('.auth-toggle');
@@ -218,52 +224,337 @@ async function loginWithTrezor() {
 
 async function loginWithNostr() {
   try {
-    // Check if Nostr extension is available
-    if (!window.nostr) {
-      throw new Error('Nostr extension not found. Please install a Nostr browser extension like Alby or nos2x.');
-    }
-
-    const pubkey = await window.nostr.getPublicKey();
-    const message = "BitcoinPitch Authentication: " + Date.now();
-    
-    const event = {
-      kind: 1,
-      created_at: Math.floor(Date.now() / 1000),
-      tags: [],
-      content: message,
-      pubkey: pubkey
-    };
-
-    const signedEvent = await window.nostr.signEvent(event);
-
-    // Send signed event to backend for verification
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-    const response = await fetch('/auth/nostr', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': csrfToken
-      },
-      body: JSON.stringify({
-        event: signedEvent,
-        message: message
-      })
-    });
-
-    if (response.ok) {
-      window.location.reload();
+    // Check if Nostr extension is available (desktop)
+    if (window.nostr) {
+      return await loginWithNostrExtension();
     } else {
-      const error = await response.json();
-      showAuthError(error.error || 'Nostr authentication failed');
+      // Mobile/No extension fallback - show manual options
+      return await showMobileNostrOptions();
     }
   } catch (error) {
     showAuthError('Nostr authentication error: ' + error.message);
   }
 }
 
-function showAuthError(message) {
-  const result = document.getElementById('auth-result');
-  result.innerHTML = '<div class="auth-error">' + message + '</div>';
+async function loginWithNostrExtension() {
+  const pubkey = await window.nostr.getPublicKey();
+  const message = "BitcoinPitch Authentication: " + Date.now();
+  
+  const event = {
+    kind: 1,
+    created_at: Math.floor(Date.now() / 1000),
+    tags: [],
+    content: message,
+    pubkey: pubkey
+  };
+
+  const signedEvent = await window.nostr.signEvent(event);
+
+  // Send signed event to backend for verification
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+  const response = await fetch('/auth/nostr', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrfToken
+    },
+    body: JSON.stringify({
+      event: signedEvent,
+      message: message
+    })
+  });
+
+  if (response.ok) {
+    window.location.reload();
+  } else {
+    const error = await response.json();
+    showAuthError(error.error || 'Nostr authentication failed');
+  }
+}
+
+async function showMobileNostrOptions() {
+  // Create mobile-friendly Nostr authentication UI
+  const authResult = document.getElementById('auth-result');
+  authResult.innerHTML = `
+    <div class="mobile-nostr-options">
+      <h3>Mobile Nostr Authentication</h3>
+      <p>Choose an option to authenticate with Nostr on mobile:</p>
+      
+      <div class="mobile-nostr-method">
+        <button onclick="showManualKeyInput()" class="button secondary">
+          🔑 Enter Your Private Key
+        </button>
+        <small>Temporarily enter your private key to sign in (not stored)</small>
+      </div>
+      
+      <div class="mobile-nostr-method">
+        <button onclick="redirectToNostrApp()" class="button primary">
+          📱 Open Nostr App
+        </button>
+        <small>Use a mobile Nostr app like Damus, Amethyst, or Primal</small>
+      </div>
+      
+      <div class="mobile-nostr-method">
+        <button onclick="showNpubInput()" class="button secondary">
+          🏷️ Enter Your Public Key (npub)
+        </button>
+        <small>Read-only mode - you can browse but not create pitches</small>
+      </div>
+      
+      <div class="mobile-nostr-method">
+        <button onclick="closeAuthModal()" class="button ghost">
+          ❌ Cancel
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function showManualKeyInput() {
+  const authResult = document.getElementById('auth-result');
+  authResult.innerHTML = `
+    <div class="manual-key-input">
+      <h3>Manual Key Authentication</h3>
+      <p><strong>⚠️ Security Warning:</strong> Only use this on your personal device. Your key will not be stored.</p>
+      
+      <form onsubmit="handleManualKeyAuth(event)">
+        <div class="form-group">
+          <label for="manual-private-key">Private Key:</label>
+          <input type="password" id="manual-private-key" placeholder="nsec1... or 64-character hex" maxlength="64" required>
+          <small>Enter your Nostr private key in nsec format (nsec1...) or 64-character hex format (0-9, a-f)</small>
+        </div>
+        
+        <div class="form-actions">
+          <button type="submit" class="button primary">Sign In</button>
+          <button type="button" onclick="showMobileNostrOptions()" class="button secondary">Back</button>
+        </div>
+      </form>
+    </div>
+  `;
+  
+  // Small delay to ensure DOM is ready, then focus the input
+  setTimeout(() => {
+    const input = document.getElementById('manual-private-key');
+    if (input) {
+      input.focus();
+      console.log('Manual key input field focused and ready');
+    } else {
+      console.error('Manual key input field not found after DOM update');
+    }
+  }, 100);
+}
+
+function showNpubInput() {
+  const authResult = document.getElementById('auth-result');
+  authResult.innerHTML = `
+    <div class="npub-input">
+      <h3>Public Key Authentication</h3>
+      <p>Enter your public key (npub format) for read-only access:</p>
+      
+      <form onsubmit="handleNpubAuth(event)">
+        <div class="form-group">
+          <label for="npub-key">Public Key (npub format):</label>
+          <input type="text" id="npub-key" placeholder="npub1..." maxlength="63" required>
+          <small>This should start with "npub1" and be 63 characters total</small>
+        </div>
+        
+        <div class="form-actions">
+          <button type="submit" class="button primary">Continue (Read-Only)</button>
+          <button type="button" onclick="showMobileNostrOptions()" class="button secondary">Back</button>
+        </div>
+      </form>
+    </div>
+  `;
+}
+
+async function handleManualKeyAuth(event) {
+  event.preventDefault();
+  console.log('Manual auth function called');
+  
+  // Check if the input element exists
+  const privateKeyInput = document.getElementById('manual-private-key');
+  if (!privateKeyInput) {
+    console.error('manual-private-key input element not found');
+    showAuthError('Form error: Input field not found. Please try again.');
+    return;
+  }
+  
+  const privateKey = privateKeyInput.value.trim();
+  console.log('Private key length:', privateKey.length);
+  
+  // Basic validation - accept both nsec format and hex format
+  const isNsecFormat = privateKey.startsWith('nsec1') && privateKey.length === 63;
+  const isHexFormat = /^[0-9a-f]{64}$/i.test(privateKey);
+  
+  if (!privateKey || (!isNsecFormat && !isHexFormat)) {
+    console.log('Validation failed: invalid format');
+    showAuthError('Invalid private key format. Must be nsec format (nsec1...) or 64 hex characters.');
+    return;
+  }
+  
+  console.log('Key format detected:', isNsecFormat ? 'nsec' : 'hex');
+  
+  try {
+    console.log('Starting authentication process...');
+    // Show loading state
+    const submitButton = event.target.querySelector('button[type="submit"]');
+    if (!submitButton) {
+      console.error('Submit button not found');
+      showAuthError('Form error: Submit button not found. Please try again.');
+      return;
+    }
+    
+    const originalText = submitButton.textContent;
+    submitButton.textContent = 'Signing in...';
+    submitButton.disabled = true;
+    
+    // Send private key to backend for authentication
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                     document.querySelector('input[name="_csrf"]')?.value || '';
+    console.log('CSRF token:', csrfToken ? 'found' : 'not found');
+    
+    console.log('Making fetch request...');
+    const response = await fetch('/auth/nostr-manual', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken
+      },
+      body: JSON.stringify({
+        private_key: privateKey
+      })
+    });
+
+    console.log('Response status:', response.status);
+    console.log('Response ok:', response.ok);
+
+    if (response.ok) {
+      const result = await response.json();
+      console.log('Success result:', result);
+      showAuthError('Authentication successful! Welcome, ' + result.user);
+      // Clear the private key from memory
+      if (privateKeyInput) {
+        privateKeyInput.value = '';
+      }
+      // Reload page after success
+      setTimeout(() => window.location.reload(), 1500);
+    } else {
+      const error = await response.json();
+      console.log('Error result:', error);
+      showAuthError(error.error || 'Manual authentication failed');
+      // Restore button state
+      if (submitButton) {
+        submitButton.textContent = originalText;
+        submitButton.disabled = false;
+      }
+    }
+  } catch (error) {
+    console.log('Exception caught:', error);
+    showAuthError('Manual authentication failed: ' + error.message);
+    // Restore button state
+    const submitButton = event.target.querySelector('button[type="submit"]');
+    if (submitButton) {
+      submitButton.textContent = 'Sign In';
+      submitButton.disabled = false;
+    }
+  }
+}
+
+async function handleNpubAuth(event) {
+  event.preventDefault();
+  
+  const npub = document.getElementById('npub-key').value.trim();
+  
+  // Basic validation
+  if (!/^npub1[a-zA-Z0-9]{58}$/.test(npub)) {
+    showAuthError('Invalid npub format. Must start with "npub1" and be 63 characters total.');
+    return;
+  }
+  
+  try {
+    // Send npub to backend for read-only authentication
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    const response = await fetch('/auth/nostr-readonly', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken
+      },
+      body: JSON.stringify({
+        npub: npub
+      })
+    });
+
+    if (response.ok) {
+      showAuthError('Read-only authentication successful! You can browse but cannot create content.');
+      setTimeout(() => window.location.reload(), 2000);
+    } else {
+      const error = await response.json();
+      showAuthError(error.error || 'Read-only authentication failed');
+    }
+  } catch (error) {
+    showAuthError('Read-only authentication failed: ' + error.message);
+  }
+}
+
+function redirectToNostrApp() {
+  // Try to detect mobile platform and redirect to appropriate Nostr app
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isAndroid = /Android/.test(navigator.userAgent);
+  
+  let appUrl = '';
+  let appName = '';
+  
+  if (isIOS) {
+    // Try Damus first, then Primal
+    appUrl = 'damus://';
+    appName = 'Damus';
+  } else if (isAndroid) {
+    // Try Amethyst first, then Primal
+    appUrl = 'amethyst://';
+    appName = 'Amethyst';
+  }
+  
+  if (appUrl) {
+    const authResult = document.getElementById('auth-result');
+    authResult.innerHTML = `
+      <div class="app-redirect">
+        <h3>Opening ${appName}...</h3>
+        <p>If ${appName} doesn't open automatically:</p>
+        <ol>
+          <li>Install a Nostr app like ${isIOS ? 'Damus' : 'Amethyst'} or Primal</li>
+          <li>Copy this website URL: ${window.location.origin}</li>
+          <li>Open the URL in your Nostr app's browser</li>
+          <li>Use the app's built-in authentication</li>
+        </ol>
+        <button onclick="showMobileNostrOptions()" class="button secondary">Back to Options</button>
+      </div>
+    `;
+    
+    // Try to open the app
+    setTimeout(() => {
+      window.location.href = appUrl;
+    }, 1000);
+    
+    // Fallback: show app store links
+    setTimeout(() => {
+      const authResult = document.getElementById('auth-result');
+      const storeLink = isIOS 
+        ? 'https://apps.apple.com/app/damus/id1628663131'
+        : 'https://play.google.com/store/apps/details?id=com.vitorpamplona.amethyst';
+      
+      authResult.innerHTML += `
+        <div class="app-store-link">
+          <p>Don't have a Nostr app yet?</p>
+          <a href="${storeLink}" target="_blank" class="button primary">
+            ${isIOS ? '📱 Get Damus from App Store' : '📱 Get Amethyst from Play Store'}
+          </a>
+        </div>
+      `;
+    }, 3000);
+  } else {
+    showAuthError('Please install a Nostr app like Damus (iOS) or Amethyst (Android) to continue.');
+  }
 }
 
 // Handle HTMX responses
