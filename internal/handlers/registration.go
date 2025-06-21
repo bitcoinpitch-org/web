@@ -339,6 +339,9 @@ func RegisterPageHandler(c *fiber.Ctx) error {
 		vars.Set("t", t)
 	}
 
+	// Add footer configuration
+	addFooterConfig(c, vars)
+
 	// Render template
 	return renderTemplate(c, tmpl, vars)
 }
@@ -415,6 +418,9 @@ func renderVerifyEmailPage(c *fiber.Ctx, view *jet.Set, errorKey, success string
 	if t, ok := c.Locals("t").(func(string, ...interface{}) string); ok {
 		vars.Set("t", t)
 	}
+
+	// Add footer configuration
+	addFooterConfig(c, vars)
 
 	return renderTemplate(c, tmpl, vars)
 }
@@ -590,6 +596,9 @@ func renderRegisterPage(c *fiber.Ctx, view *jet.Set, errorMsg, email, username s
 		vars.Set("t", t)
 	}
 
+	// Add footer configuration
+	addFooterConfig(c, vars)
+
 	return renderTemplate(c, tmpl, vars)
 }
 
@@ -619,6 +628,9 @@ func renderRegisterSuccessPage(c *fiber.Ctx, view *jet.Set, email, emailError st
 	if t, ok := c.Locals("t").(func(string, ...interface{}) string); ok {
 		vars.Set("t", t)
 	}
+
+	// Add footer configuration
+	addFooterConfig(c, vars)
 
 	return renderTemplate(c, tmpl, vars)
 }
