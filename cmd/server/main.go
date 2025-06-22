@@ -226,7 +226,7 @@ func main() {
 	// Initialize internationalization
 	log.Println("Initializing i18n system...")
 	i18nManager := i18n.NewManager("en") // Default to English
-	if err := i18nManager.LoadTranslations("./i18n"); err != nil {
+	if err := i18nManager.LoadTranslations("/app/i18n"); err != nil {
 		log.Fatalf("Failed to load translations: %v", err)
 	}
 	log.Println("I18n system initialized successfully")

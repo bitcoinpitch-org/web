@@ -7,6 +7,7 @@ import (
 	"bitcoinpitch.org/internal/config"
 	"bitcoinpitch.org/internal/database"
 	"bitcoinpitch.org/internal/handlers"
+	"bitcoinpitch.org/internal/i18n"
 	"bitcoinpitch.org/internal/middleware"
 	"bitcoinpitch.org/internal/models"
 
@@ -103,12 +104,28 @@ func SetupRoutes(app *fiber.App, view *jet.Set, repo *database.Repository, confi
 
 	// Language switching routes
 	app.Get("/lang/:lang", func(c *fiber.Ctx) error {
-		// Get the i18n manager from application context (it should be set during app initialization)
-		// For now, we'll implement a basic handler
+		// Get the i18n manager from context
+		i18nManager := c.Locals("i18nManager")
+		if i18nManager == nil {
+			return c.Status(500).JSON(fiber.Map{
+				"error": "I18n manager not available",
+			})
+		}
+
 		langCode := c.Params("lang")
 
-		// Basic validation - only allow known languages
-		if langCode != "en" && langCode != "cs" {
+		// Validate language code using i18n manager
+		manager := i18nManager.(*i18n.Manager)
+		availableLanguages := manager.GetAvailableLanguages()
+		isValid := false
+		for _, lang := range availableLanguages {
+			if lang == langCode {
+				isValid = true
+				break
+			}
+		}
+
+		if !isValid {
 			return c.Status(400).JSON(fiber.Map{
 				"error": "Invalid language code",
 			})
