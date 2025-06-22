@@ -176,12 +176,12 @@ class TutorialEngine {
                 <div class="tutorial-body"></div>
                 <div class="tutorial-footer">
                     <div class="tutorial-progress">
-                        <span class="tutorial-current">1</span> ${this.translations ? this.translations.ui.of : 'of'} <span class="tutorial-total">${this.steps.length}</span>
+                        <span class="tutorial-current">1</span> ${this.translations.ui.of} <span class="tutorial-total">${this.steps.length}</span>
                     </div>
                     <div class="tutorial-buttons">
-                        <button class="tutorial-skip">${this.translations ? this.translations.ui.skipTour : 'Skip Tour'}</button>
-                        <button class="tutorial-prev" disabled>${this.translations ? this.translations.ui.previous : 'Previous'}</button>
-                        <button class="tutorial-next">${this.translations ? this.translations.ui.next : 'Next'}</button>
+                        <button class="tutorial-skip">${this.translations.ui.skipTour}</button>
+                        <button class="tutorial-prev" disabled>${this.translations.ui.previous}</button>
+                        <button class="tutorial-next">${this.translations.ui.next}</button>
                     </div>
                 </div>
             </div>
@@ -264,10 +264,10 @@ class TutorialEngine {
         prevBtn.disabled = stepIndex === 0;
         
         if (step.isLast) {
-            nextBtn.textContent = this.translations ? this.translations.ui.finish : 'Finish';
+            nextBtn.textContent = this.translations.ui.finish;
             skipBtn.style.display = 'none';
         } else {
-            nextBtn.textContent = this.translations ? this.translations.ui.next : 'Next';
+            nextBtn.textContent = this.translations.ui.next;
             skipBtn.style.display = step.showSkip ? 'inline-block' : 'none';
         }
     }
