@@ -99,6 +99,23 @@ func HomeHandler(c *fiber.Ctx) error {
 	authorFilter := c.Query("author")
 	languageFilter := c.Query("language")
 
+	// Smart language filtering: Auto-filter by detected language if no explicit filter and on first visit
+	if languageFilter == "" {
+		if isFirstVisit := c.Locals("isFirstVisit"); isFirstVisit != nil && isFirstVisit.(bool) {
+			if currentLang := c.Locals("currentLang"); currentLang != nil {
+				detectedLang := currentLang.(string)
+				// Check if pitches exist in the detected language
+				langUsage, langErr := repo.GetLanguageUsage(c.Context())
+				if langErr == nil {
+					if count, exists := langUsage[detectedLang]; exists && count > 0 {
+						languageFilter = detectedLang
+						log.Printf("[HomeHandler] Auto-filtering to detected language '%s' with %d pitches", detectedLang, count)
+					}
+				}
+			}
+		}
+	}
+
 	// Set filter values in template context
 	vars.Set("TagFilter", tagFilter)
 	vars.Set("LengthFilter", lengthFilter)
@@ -356,6 +373,22 @@ func PitchListHandler(c *fiber.Ctx) error {
 	lengthFilter := c.Query("length")
 	authorFilter := c.Query("author")
 	languageFilter := c.Query("language")
+
+	// Smart language filtering: Auto-filter by detected language if no explicit filter and on first visit
+	if languageFilter == "" {
+		if isFirstVisit := c.Locals("isFirstVisit"); isFirstVisit != nil && isFirstVisit.(bool) {
+			if currentLang := c.Locals("currentLang"); currentLang != nil {
+				detectedLang := currentLang.(string)
+				// Check if pitches exist in the detected language for this category
+				filters := map[string]interface{}{"main_category": category, "language": detectedLang}
+				count, langErr := repo.CountPitches(c.Context(), filters)
+				if langErr == nil && count > 0 {
+					languageFilter = detectedLang
+					log.Printf("[PitchListHandler] Auto-filtering category '%s' to detected language '%s' with %d pitches", category, detectedLang, count)
+				}
+			}
+		}
+	}
 
 	// Set filter values in template context
 	if tagFilter != "" {

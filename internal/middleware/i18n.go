@@ -16,18 +16,27 @@ type I18nConfig struct {
 func I18n(config I18nConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var currentLang string
+		var isFirstVisit bool
 
 		// 1. Try to get language from cookie first
 		if cookieLang := c.Cookies(config.CookieName); cookieLang != "" {
 			if isValidLanguage(config.I18nManager, cookieLang) {
 				currentLang = cookieLang
 			}
+		} else {
+			// No language cookie exists - this is a first visit
+			isFirstVisit = true
 		}
 
-		// 2. If no valid cookie, try to detect from Accept-Language header
+		// 2. If no valid cookie (first visit), try to detect from Accept-Language header
 		if currentLang == "" {
 			acceptLang := c.Get("Accept-Language")
-			currentLang = config.I18nManager.DetectLanguageFromAccept(acceptLang)
+			detectedLang := config.I18nManager.DetectLanguageFromAccept(acceptLang)
+
+			// Only use detected language if we have translation for it
+			if detectedLang != "" && isValidLanguage(config.I18nManager, detectedLang) {
+				currentLang = detectedLang
+			}
 		}
 
 		// 3. Fallback to default language if nothing else works
@@ -35,9 +44,21 @@ func I18n(config I18nConfig) fiber.Handler {
 			currentLang = config.DefaultLang
 		}
 
+		// 4. If this is a first visit and we detected a valid language, set the cookie
+		if isFirstVisit && currentLang != "" {
+			c.Cookie(&fiber.Cookie{
+				Name:     config.CookieName,
+				Value:    currentLang,
+				MaxAge:   30 * 24 * 60 * 60, // 30 days
+				HTTPOnly: false,             // Allow JavaScript to read for client-side logic
+				SameSite: "Lax",
+			})
+		}
+
 		// Set the current language in context for handlers and templates
 		c.Locals("currentLang", currentLang)
 		c.Locals("i18nManager", config.I18nManager)
+		c.Locals("isFirstVisit", isFirstVisit)
 
 		// Add translation helper function to context
 		c.Locals("t", func(key string) string {
