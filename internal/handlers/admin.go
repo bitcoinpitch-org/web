@@ -349,9 +349,7 @@ func (h *AdminHandler) AdminUserUpdateRoleHandler(c *fiber.Ctx) error {
 	// Validate user ID
 	userUUID, err := uuid.Parse(userID)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid user ID",
-		})
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid user ID")
 	}
 
 	// Validate role
@@ -364,38 +362,192 @@ func (h *AdminHandler) AdminUserUpdateRoleHandler(c *fiber.Ctx) error {
 	case "admin":
 		role = models.UserRoleAdmin
 	default:
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid role",
-		})
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid role")
 	}
 
 	// Get the target user
 	targetUser, err := h.repo.GetUserByID(c.Context(), userUUID)
 	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "User not found",
-		})
+		return c.Status(fiber.StatusNotFound).SendString("User not found")
 	}
 
 	// Prevent users from changing their own role
 	if targetUser.ID == currentUser.ID {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Cannot change your own role",
-		})
+		return c.Status(fiber.StatusBadRequest).SendString("Cannot change your own role")
 	}
 
 	// Update the user's role
 	targetUser.SetRole(role)
 	if err := h.repo.UpdateUser(c.Context(), targetUser); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to update user role",
-		})
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to update user role")
 	}
 
-	return c.JSON(fiber.Map{
-		"success": true,
-		"message": fmt.Sprintf("User role updated to %s", newRole),
-	})
+	// Redirect back to admin users page
+	return c.Redirect("/admin/users")
+}
+
+// AdminUserDisableHandler handles user disable/enable
+func (h *AdminHandler) AdminUserDisableHandler(c *fiber.Ctx) error {
+	userID := c.Params("id")
+	action := c.FormValue("action") // "disable" or "enable"
+	currentUser := c.Locals("user").(*models.User)
+
+	// Validate user ID
+	userUUID, err := uuid.Parse(userID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid user ID")
+	}
+
+	// Get the target user
+	targetUser, err := h.repo.GetUserByID(c.Context(), userUUID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).SendString("User not found")
+	}
+
+	// Prevent users from disabling themselves
+	if targetUser.ID == currentUser.ID {
+		return c.Status(fiber.StatusBadRequest).SendString("Cannot disable yourself")
+	}
+
+	// Update the user's disabled status
+	disabled := action == "disable"
+	targetUser.SetDisabled(disabled)
+	if err := h.repo.UpdateUser(c.Context(), targetUser); err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to update user status")
+	}
+
+	// Redirect back to admin users page
+	return c.Redirect("/admin/users")
+}
+
+// AdminUserHideHandler handles user hide/show
+func (h *AdminHandler) AdminUserHideHandler(c *fiber.Ctx) error {
+	userID := c.Params("id")
+	action := c.FormValue("action") // "hide" or "show"
+
+	// Validate user ID
+	userUUID, err := uuid.Parse(userID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid user ID")
+	}
+
+	// Get the target user
+	targetUser, err := h.repo.GetUserByID(c.Context(), userUUID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).SendString("User not found")
+	}
+
+	// Update the user's hidden status
+	hidden := action == "hide"
+	targetUser.SetHidden(hidden)
+	if err := h.repo.UpdateUser(c.Context(), targetUser); err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to update user visibility")
+	}
+
+	// Redirect back to admin users page
+	return c.Redirect("/admin/users")
+}
+
+// AdminUserDeleteHandler handles user soft delete/restore
+func (h *AdminHandler) AdminUserDeleteHandler(c *fiber.Ctx) error {
+	userID := c.Params("id")
+	action := c.FormValue("action") // "delete" or "restore"
+	currentUser := c.Locals("user").(*models.User)
+
+	// Validate user ID
+	userUUID, err := uuid.Parse(userID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid user ID")
+	}
+
+	// Get the target user
+	targetUser, err := h.repo.GetUserByID(c.Context(), userUUID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).SendString("User not found")
+	}
+
+	// Prevent users from deleting themselves
+	if targetUser.ID == currentUser.ID {
+		return c.Status(fiber.StatusBadRequest).SendString("Cannot delete yourself")
+	}
+
+	// Perform the action
+	if action == "delete" {
+		if !targetUser.IsDeleted() {
+			targetUser.SoftDelete()
+			err = h.repo.UpdateUser(c.Context(), targetUser)
+			if err != nil {
+				return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete user")
+			}
+		}
+	} else if action == "restore" {
+		if targetUser.IsDeleted() {
+			targetUser.Restore()
+			err = h.repo.UpdateUser(c.Context(), targetUser)
+			if err != nil {
+				return c.Status(fiber.StatusInternalServerError).SendString("Failed to restore user")
+			}
+		}
+	} else {
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid action")
+	}
+
+	// Redirect back to admin users page
+	return c.Redirect("/admin/users")
+}
+
+// AdminPitchDeleteHandler handles pitch deletion by admin
+func (h *AdminHandler) AdminPitchDeleteHandler(c *fiber.Ctx) error {
+	pitchID := c.Params("id")
+
+	// Validate pitch ID
+	pitchUUID, err := uuid.Parse(pitchID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid pitch ID")
+	}
+
+	// Get the pitch
+	pitch, err := h.repo.GetPitch(c.Context(), pitchUUID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).SendString("Pitch not found")
+	}
+
+	// Delete the pitch
+	pitch.Delete()
+	if err := h.repo.UpdatePitch(c.Context(), pitch); err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete pitch")
+	}
+
+	// Redirect back to admin pitches page
+	return c.Redirect("/admin/pitches")
+}
+
+// AdminPitchHideHandler handles pitch hide/show by admin
+func (h *AdminHandler) AdminPitchHideHandler(c *fiber.Ctx) error {
+	pitchID := c.Params("id")
+	action := c.FormValue("action") // "hide" or "show"
+
+	// Validate pitch ID
+	pitchUUID, err := uuid.Parse(pitchID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid pitch ID")
+	}
+
+	// Get the pitch
+	pitch, err := h.repo.GetPitch(c.Context(), pitchUUID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).SendString("Pitch not found")
+	}
+
+	// Update the pitch's hidden status
+	hidden := action == "hide"
+	pitch.SetHidden(hidden)
+	if err := h.repo.UpdatePitch(c.Context(), pitch); err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to update pitch visibility")
+	}
+
+	// Redirect back to admin pitches page
+	return c.Redirect("/admin/pitches")
 }
 
 // AdminAuditLogsHandler shows the audit logs page
@@ -467,5 +619,213 @@ func (h *AdminHandler) AdminAuditLogsHandler(c *fiber.Ctx) error {
 	}
 
 	log.Printf("[DEBUG] AdminAuditLogs: Template rendered successfully")
+	return c.Type("html").SendString(buf.String())
+}
+
+// AdminPitchesHandler shows the admin pitch management page
+func (h *AdminHandler) AdminPitchesHandler(c *fiber.Ctx) error {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[DEBUG] AdminPitchesHandler PANIC: %v", r)
+		}
+	}()
+
+	log.Println("[DEBUG] AdminPitchesHandler called")
+	view := c.Locals("view").(*jet.Set)
+	user := c.Locals("user").(*models.User)
+
+	ctx := c.Context()
+
+	// Parse pagination parameters
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	if page < 1 {
+		page = 1
+	}
+	limit := 25
+	offset := (page - 1) * limit
+
+	// Parse filter parameters
+	categoryFilter := c.Query("category", "")
+	statusFilter := c.Query("status", "")
+
+	log.Printf("[DEBUG] AdminPitches: page=%d, limit=%d, offset=%d, category=%s, status=%s",
+		page, limit, offset, categoryFilter, statusFilter)
+
+	// Create filters based on parameters
+	filters := make(map[string]interface{})
+
+	if categoryFilter != "" {
+		filters["main_category"] = categoryFilter
+	}
+
+	// For admin, we need to get ALL pitches including hidden and deleted
+	// We'll use raw SQL query for this since ListPitches filters out deleted pitches
+	query := `
+		SELECT p.*, 
+		       u.display_name as posted_by_display_name,
+		       u.auth_type as posted_by_auth_type,
+		       u.username as posted_by_username,
+		       u.show_auth_method as posted_by_show_auth_method,
+		       u.show_username as posted_by_show_username,
+		       u.show_profile_info as posted_by_show_profile_info,
+		       COALESCE(json_agg(jsonb_build_object(
+		         'id', t.id,
+		         'name', t.name,
+		         'usage_count', t.usage_count,
+		         'created_at', t.created_at,
+		         'updated_at', t.updated_at
+		       )) FILTER (WHERE t.id IS NOT NULL), '[]') AS tags
+		FROM pitches p
+		LEFT JOIN users u ON p.posted_by = u.id
+		LEFT JOIN pitch_tags pt ON p.id = pt.pitch_id
+		LEFT JOIN tags t ON pt.tag_id = t.id
+		WHERE 1=1
+	`
+	args := []interface{}{}
+	argCount := 1
+
+	// Add category filter
+	if categoryFilter != "" {
+		query += fmt.Sprintf(" AND p.main_category = $%d", argCount)
+		args = append(args, categoryFilter)
+		argCount++
+	}
+
+	// Add status filter
+	switch statusFilter {
+	case "visible":
+		query += " AND p.deleted_at IS NULL AND (p.hidden = false OR p.hidden IS NULL)"
+	case "hidden":
+		query += " AND p.deleted_at IS NULL AND p.hidden = true"
+	case "deleted":
+		query += " AND p.deleted_at IS NOT NULL"
+	default:
+		// Show all pitches (no additional filter)
+	}
+
+	query += `
+		GROUP BY p.id, u.display_name, u.auth_type, u.username, u.show_auth_method, u.show_username, u.show_profile_info
+		ORDER BY p.created_at DESC
+		LIMIT $` + fmt.Sprintf("%d", argCount) + `
+		OFFSET $` + fmt.Sprintf("%d", argCount+1)
+	args = append(args, limit, offset)
+
+	var pitches []*models.Pitch
+	err := h.repo.GetDB().SelectContext(ctx, &pitches, query, args...)
+	if err != nil {
+		log.Printf("[DEBUG] AdminPitches: Query error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load pitches: " + err.Error())
+	}
+
+	// Get total count for pagination
+	countQuery := `
+		SELECT COUNT(DISTINCT p.id)
+		FROM pitches p
+		WHERE 1=1
+	`
+	countArgs := []interface{}{}
+	countArgCount := 1
+
+	// Add same filters for count
+	if categoryFilter != "" {
+		countQuery += fmt.Sprintf(" AND p.main_category = $%d", countArgCount)
+		countArgs = append(countArgs, categoryFilter)
+		countArgCount++
+	}
+
+	switch statusFilter {
+	case "visible":
+		countQuery += " AND p.deleted_at IS NULL AND (p.hidden = false OR p.hidden IS NULL)"
+	case "hidden":
+		countQuery += " AND p.deleted_at IS NULL AND p.hidden = true"
+	case "deleted":
+		countQuery += " AND p.deleted_at IS NOT NULL"
+	}
+
+	var totalPitches int
+	err = h.repo.GetDB().GetContext(ctx, &totalPitches, countQuery, countArgs...)
+	if err != nil {
+		log.Printf("[DEBUG] AdminPitches: Count error: %v", err)
+		totalPitches = len(pitches) // Fallback
+	}
+
+	// Calculate statistics for all pitches
+	statsQuery := `
+		SELECT 
+			COUNT(*) as total,
+			COUNT(CASE WHEN deleted_at IS NULL AND (hidden = false OR hidden IS NULL) THEN 1 END) as visible,
+			COUNT(CASE WHEN deleted_at IS NULL AND hidden = true THEN 1 END) as hidden,
+			COUNT(CASE WHEN deleted_at IS NOT NULL THEN 1 END) as deleted
+		FROM pitches
+		WHERE 1=1
+	`
+	statsArgs := []interface{}{}
+	if categoryFilter != "" {
+		statsQuery += " AND main_category = $1"
+		statsArgs = append(statsArgs, categoryFilter)
+	}
+
+	var stats struct {
+		Total   int `db:"total"`
+		Visible int `db:"visible"`
+		Hidden  int `db:"hidden"`
+		Deleted int `db:"deleted"`
+	}
+	err = h.repo.GetDB().GetContext(ctx, &stats, statsQuery, statsArgs...)
+	if err != nil {
+		log.Printf("[DEBUG] AdminPitches: Stats error: %v", err)
+		// Use fallback values
+		stats.Total = len(pitches)
+		stats.Visible = len(pitches)
+	}
+
+	log.Printf("[DEBUG] AdminPitches: Found %d pitches, total: %d", len(pitches), totalPitches)
+	log.Printf("[DEBUG] AdminPitches: Stats - total: %d, visible: %d, hidden: %d, deleted: %d",
+		stats.Total, stats.Visible, stats.Hidden, stats.Deleted)
+
+	vars := make(jet.VarMap)
+	vars.Set("Title", "Pitch Management")
+	vars.Set("User", user)
+	vars.Set("CurrentUser", user)
+	vars.Set("ShowUserMenu", true)
+
+	// Set current language from i18n middleware
+	if currentLang := c.Locals("currentLang"); currentLang != nil {
+		vars.Set("currentLang", currentLang)
+	} else {
+		vars.Set("currentLang", "en")
+	}
+
+	vars.Set("Pitches", pitches)
+	vars.Set("TotalPitches", stats.Total)
+	vars.Set("VisiblePitches", stats.Visible)
+	vars.Set("HiddenPitches", stats.Hidden)
+	vars.Set("DeletedPitches", stats.Deleted)
+	vars.Set("CategoryFilter", categoryFilter)
+	vars.Set("StatusFilter", statusFilter)
+	vars.Set("CurrentPage", page)
+	vars.Set("TotalPages", (totalPitches+limit-1)/limit) // Ceiling division
+
+	if csrfToken := c.Locals("csrf"); csrfToken != nil {
+		vars.Set("CsrfToken", csrfToken)
+	}
+
+	// Add footer configuration
+	addFooterConfig(c, vars)
+
+	log.Printf("[DEBUG] AdminPitches: About to render template")
+	t, err := view.GetTemplate("pages/admin/pitches.jet")
+	if err != nil {
+		log.Printf("[DEBUG] AdminPitches: Template error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).SendString("Template error: " + err.Error())
+	}
+
+	var buf strings.Builder
+	if err := t.Execute(&buf, vars, nil); err != nil {
+		log.Printf("[DEBUG] AdminPitches: Template execution error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).SendString("Template execution error: " + err.Error())
+	}
+
+	log.Printf("[DEBUG] AdminPitches: Template rendered successfully")
 	return c.Type("html").SendString(buf.String())
 }

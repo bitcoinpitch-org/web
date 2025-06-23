@@ -10,6 +10,7 @@
             <a href="/admin" class="admin-nav-link active">{{ t("admin.dashboard") }}</a>
             <a href="/admin/config" class="admin-nav-link">{{ t("admin.configuration") }}</a>
             <a href="/admin/users" class="admin-nav-link">{{ t("admin.users") }}</a>
+            <a href="/admin/pitches" class="admin-nav-link">{{ t("admin.pitch_management") }}</a>
             <a href="/admin/audit-logs" class="admin-nav-link">{{ t("admin.audit_logs") }}</a>
         </nav>
     </div>
@@ -45,6 +46,10 @@
                 <a href="/admin/users" class="action-button">
                     <span class="action-icon">👥</span>
                     <span class="action-text">{{ t("admin.manage_users") }}</span>
+                </a>
+                <a href="/admin/pitches" class="action-button">
+                    <span class="action-icon">📝</span>
+                    <span class="action-text">{{ t("admin.pitch_management") }}</span>
                 </a>
                 <a href="/admin/config?category=pitch_limits" class="action-button">
                     <span class="action-icon">📏</span>

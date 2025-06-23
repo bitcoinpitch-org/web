@@ -1,0 +1,418 @@
+{{ extends "../../layouts/base.jet" }}
+
+{{ block title() }}
+    {{ t("admin.pitch_management") }} - {{ t("site.name") }}
+{{ end }}
+
+{{ block main() }}
+<div class="admin-container">
+    <div class="admin-header">
+        <h1>{{ t("admin.pitch_management") }}</h1>
+        <p class="admin-subtitle">{{ t("admin.manage_pitches_subtitle") }}</p>
+    </div>
+
+    <div class="admin-content">
+        <!-- Pitch Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>{{ t("admin.total_pitches") }}</h3>
+                <div class="stat-number">{{ TotalPitches }}</div>
+            </div>
+            <div class="stat-card">
+                <h3>{{ t("admin.visible_pitches") }}</h3>
+                <div class="stat-number">{{ VisiblePitches }}</div>
+            </div>
+            <div class="stat-card">
+                <h3>{{ t("admin.hidden_pitches") }}</h3>
+                <div class="stat-number">{{ HiddenPitches }}</div>
+            </div>
+            <div class="stat-card">
+                <h3>{{ t("admin.deleted_pitches") }}</h3>
+                <div class="stat-number">{{ DeletedPitches }}</div>
+            </div>
+        </div>
+
+        <!-- Pitch Filter -->
+        <div class="pitch-filters">
+            <form method="GET" action="/admin/pitches" class="filter-form">
+                <select name="category" onchange="this.form.submit()">
+                    <option value="">{{ t("admin.all_categories") }}</option>
+                    <option value="bitcoin" {{ if CategoryFilter == "bitcoin" }}selected{{ end }}>{{ t("category.bitcoin") }}</option>
+                    <option value="lightning" {{ if CategoryFilter == "lightning" }}selected{{ end }}>{{ t("category.lightning") }}</option>
+                    <option value="cashu" {{ if CategoryFilter == "cashu" }}selected{{ end }}>{{ t("category.cashu") }}</option>
+                </select>
+                <select name="status" onchange="this.form.submit()">
+                    <option value="">{{ t("admin.all_statuses") }}</option>
+                    <option value="visible" {{ if StatusFilter == "visible" }}selected{{ end }}>{{ t("admin.visible") }}</option>
+                    <option value="hidden" {{ if StatusFilter == "hidden" }}selected{{ end }}>{{ t("admin.hidden") }}</option>
+                    <option value="deleted" {{ if StatusFilter == "deleted" }}selected{{ end }}>{{ t("admin.deleted") }}</option>
+                </select>
+            </form>
+        </div>
+
+        <!-- Pitches Table -->
+        <div class="pitches-table-container">
+            <table class="pitches-table">
+                <thead>
+                    <tr>
+                        <th>{{ t("admin.pitch_id") }}</th>
+                        <th>{{ t("admin.content") }}</th>
+                        <th>{{ t("admin.author") }}</th>
+                        <th>{{ t("admin.category") }}</th>
+                        <th>{{ t("admin.language") }}</th>
+                        <th>{{ t("admin.status") }}</th>
+                        <th>{{ t("admin.created_at") }}</th>
+                        <th>{{ t("admin.actions") }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{ range Pitches }}
+                        <tr class="{{ if .IsDeleted() }}pitch-deleted{{ else if .IsHidden() }}pitch-hidden{{ end }}">
+                            <td class="pitch-id">{{ .ID }}</td>
+                            <td class="pitch-content">
+                                <div class="pitch-preview">{{ .Content | truncate(100) }}</div>
+                                <div class="pitch-meta">
+                                    <span class="pitch-votes">{{ .Score }} pts</span>
+                                    <span class="pitch-length">{{ .LengthCategory }}</span>
+                                </div>
+                            </td>
+                            <td class="pitch-author">{{ .GetPostedByDisplayName() }}</td>
+                            <td class="pitch-category">
+                                <span class="category-badge category-{{ .MainCategory }}">{{ .MainCategory }}</span>
+                            </td>
+                            <td class="pitch-language">{{ .Language }}</td>
+                            <td class="pitch-status">
+                                <div class="status-badges">
+                                    {{ if .IsDeleted() }}
+                                        <span class="status-badge status-deleted">{{ t("admin.deleted") }}</span>
+                                    {{ else if .IsHidden() }}
+                                        <span class="status-badge status-hidden">{{ t("admin.hidden") }}</span>
+                                    {{ else }}
+                                        <span class="status-badge status-visible">{{ t("admin.visible") }}</span>
+                                    {{ end }}
+                                </div>
+                            </td>
+                            <td class="pitch-created">{{ formatDate(.CreatedAt, "2006-01-02 15:04") }}</td>
+                            <td class="pitch-actions">
+                                <div class="admin-controls">
+                                    <!-- Edit Link -->
+                                    <a href="/pitch/{{ .ID }}/edit" class="admin-btn edit-btn" title="{{ t("admin.edit_pitch") }}">✏️</a>
+                                    
+                                    <!-- Status Management -->
+                                    <div class="status-controls">
+                                        {{ if .IsHidden() }}
+                                            <form method="POST" action="/admin/pitches/{{ .ID }}/hide" style="display: inline;">
+                                                <input type="hidden" name="_token" value="{{ CsrfToken }}">
+                                                <input type="hidden" name="action" value="show">
+                                                <button type="submit" class="admin-btn show-btn" title="{{ t("admin.show_pitch") }}">👁️</button>
+                                            </form>
+                                        {{ else }}
+                                            <form method="POST" action="/admin/pitches/{{ .ID }}/hide" style="display: inline;">
+                                                <input type="hidden" name="_token" value="{{ CsrfToken }}">
+                                                <input type="hidden" name="action" value="hide">
+                                                <button type="submit" class="admin-btn hide-btn" title="{{ t("admin.hide_pitch") }}">🙈</button>
+                                            </form>
+                                        {{ end }}
+                                        
+                                        {{ if not .IsDeleted() }}
+                                            <form method="POST" action="/admin/pitches/{{ .ID }}/delete" style="display: inline;">
+                                                <input type="hidden" name="_token" value="{{ CsrfToken }}">
+                                                <button type="submit" class="admin-btn delete-btn" title="{{ t("admin.delete_pitch") }}" 
+                                                        onclick="return confirm('{{ t("admin.confirm_delete_pitch") }}')">🗑️</button>
+                                            </form>
+                                        {{ end }}
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    {{ end }}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {{ if TotalPages > 1 }}
+            <div class="pagination">
+                {{ if CurrentPage > 1 }}
+                    <a href="/admin/pitches?page={{ CurrentPage - 1 }}{{ if CategoryFilter }}&category={{ CategoryFilter }}{{ end }}{{ if StatusFilter }}&status={{ StatusFilter }}{{ end }}" class="page-link">{{ t("admin.previous") }}</a>
+                {{ end }}
+                
+                <span class="page-info">{{ t("admin.page") }} {{ CurrentPage }} {{ t("admin.of") }} {{ TotalPages }}</span>
+                
+                {{ if CurrentPage < TotalPages }}
+                    <a href="/admin/pitches?page={{ CurrentPage + 1 }}{{ if CategoryFilter }}&category={{ CategoryFilter }}{{ end }}{{ if StatusFilter }}&status={{ StatusFilter }}{{ end }}" class="page-link">{{ t("admin.next") }}</a>
+                {{ end }}
+            </div>
+        {{ end }}
+    </div>
+</div>
+
+<style>
+.admin-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.admin-header {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.admin-header h1 {
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+}
+
+.admin-subtitle {
+    color: #6b7280;
+    margin: 0;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card h3 {
+    margin: 0 0 0.5rem 0;
+    color: #374151;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #f97316;
+}
+
+.pitch-filters {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.filter-form {
+    display: flex;
+    gap: 1rem;
+}
+
+.filter-form select {
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    background: white;
+}
+
+.pitches-table-container {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow-x: auto;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.pitches-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.pitches-table th,
+.pitches-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.pitches-table th {
+    background: #f9fafb;
+    font-weight: 500;
+    color: #374151;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.pitches-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+.pitch-deleted {
+    background: #fef3c7 !important;
+    opacity: 0.7;
+}
+
+.pitch-hidden {
+    background: #f3f4f6 !important;
+    opacity: 0.8;
+}
+
+.pitch-id {
+    font-family: monospace;
+    font-size: 0.75rem;
+    color: #6b7280;
+    max-width: 100px;
+    word-break: break-all;
+}
+
+.pitch-content {
+    max-width: 300px;
+}
+
+.pitch-preview {
+    font-size: 0.875rem;
+    line-height: 1.4;
+    margin-bottom: 0.25rem;
+}
+
+.pitch-meta {
+    font-size: 0.75rem;
+    color: #6b7280;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.category-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.category-bitcoin { background: #fef3c7; color: #92400e; }
+.category-lightning { background: #ddd6fe; color: #7c3aed; }
+.category-cashu { background: #d1fae5; color: #065f46; }
+
+.admin-controls {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.status-controls {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.admin-btn {
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 3px;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+    min-width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: inherit;
+}
+
+.admin-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.edit-btn:hover { background: #dbeafe; }
+.show-btn:hover { background: #dbeafe; }
+.hide-btn:hover { background: #f3f4f6; }
+.delete-btn:hover { background: #fee2e2; }
+
+.status-badges {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.125rem 0.375rem;
+    border-radius: 3px;
+    font-size: 0.625rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.status-visible { background: #d1fae5; color: #065f46; }
+.status-hidden { background: #f3f4f6; color: #6b7280; }
+.status-deleted { background: #fef3c7; color: #92400e; }
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding: 1rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.page-link {
+    padding: 0.5rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    text-decoration: none;
+    color: #374151;
+    background: white;
+    transition: all 0.2s;
+}
+
+.page-link:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.page-info {
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+    .admin-container {
+        padding: 1rem;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .pitches-table {
+        font-size: 0.875rem;
+    }
+    
+    .pitch-id {
+        display: none;
+    }
+    
+    .pitch-content {
+        max-width: 200px;
+    }
+}
+</style>
+{{ end }} 

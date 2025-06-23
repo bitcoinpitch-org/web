@@ -29,6 +29,11 @@ func NewRepository(db *DB) *Repository {
 	return &Repository{db: db}
 }
 
+// GetDB returns the underlying database connection for complex queries
+func (r *Repository) GetDB() *DB {
+	return r.db
+}
+
 // Ping checks if the database connection is alive
 func (r *Repository) Ping(ctx context.Context) error {
 	return r.db.Ping(ctx)
@@ -93,7 +98,7 @@ func (r *Repository) UpdateUser(ctx context.Context, user *models.User) error {
 		    email_verification_token = :email_verification_token, email_verification_expires_at = :email_verification_expires_at,
 		    role = :role, totp_secret = :totp_secret, totp_enabled = :totp_enabled, totp_backup_codes = :totp_backup_codes,
 		    password_reset_token = :password_reset_token, password_reset_expires_at = :password_reset_expires_at,
-		    page_size = :page_size
+		    page_size = :page_size, disabled = :disabled, hidden = :hidden, deleted_at = :deleted_at
 		WHERE id = :id
 	`
 	_, err := r.db.NamedExecContext(ctx, query, user)
@@ -146,11 +151,11 @@ func (r *Repository) CreatePitch(ctx context.Context, pitch *models.Pitch) error
 		query := `
 			INSERT INTO pitches (
 				id, user_id, content, language, main_category, length_category,
-				created_at, updated_at, posted_by, author_type, author_name, author_handle
+				created_at, updated_at, posted_by, author_type, author_name, author_handle, hidden
 			)
 			VALUES (
 				:id, :user_id, :content, :language, :main_category, :length_category,
-				:created_at, :updated_at, :posted_by, :author_type, :author_name, :author_handle
+				:created_at, :updated_at, :posted_by, :author_type, :author_name, :author_handle, :hidden
 			)
 		`
 		_, err := tx.NamedExecContext(ctx, query, pitch)
@@ -255,7 +260,8 @@ func (r *Repository) UpdatePitch(ctx context.Context, pitch *models.Pitch) error
 				upvote_count = :upvote_count,
 				downvote_count = :downvote_count,
 				score = :score,
-				last_vote_at = :last_vote_at
+				last_vote_at = :last_vote_at,
+				hidden = :hidden
 			WHERE id = :id AND deleted_at IS NULL
 		`
 		_, err := tx.NamedExecContext(ctx, query, pitch)
@@ -352,7 +358,7 @@ func (r *Repository) ListPitches(ctx context.Context, filters map[string]interfa
 		LEFT JOIN users u ON p.posted_by = u.id
 		LEFT JOIN pitch_tags pt ON p.id = pt.pitch_id
 		LEFT JOIN tags t ON pt.tag_id = t.id
-		WHERE p.deleted_at IS NULL
+		WHERE p.deleted_at IS NULL AND (p.hidden = false OR p.hidden IS NULL)
 	`
 	args := []interface{}{}
 	argCount := 1
@@ -398,7 +404,7 @@ func (r *Repository) ListPitches(ctx context.Context, filters map[string]interfa
 
 // CountPitches counts pitches with optional filters
 func (r *Repository) CountPitches(ctx context.Context, filters map[string]interface{}) (int, error) {
-	query := `SELECT COUNT(DISTINCT p.id) FROM pitches p WHERE p.deleted_at IS NULL`
+	query := `SELECT COUNT(DISTINCT p.id) FROM pitches p WHERE p.deleted_at IS NULL AND (p.hidden = false OR p.hidden IS NULL)`
 	args := []interface{}{}
 	argCount := 1
 
@@ -627,7 +633,7 @@ func (r *Repository) ListPitchesByTag(ctx context.Context, category, tagName str
 		LEFT JOIN users u ON p.posted_by = u.id
 		LEFT JOIN pitch_tags pt ON p.id = pt.pitch_id
 		LEFT JOIN tags t ON pt.tag_id = t.id
-		WHERE p.deleted_at IS NULL 
+		WHERE p.deleted_at IS NULL AND (p.hidden = false OR p.hidden IS NULL)
 		  AND p.main_category = $1
 		  AND p.id IN (
 			  SELECT DISTINCT pt2.pitch_id 
@@ -652,7 +658,7 @@ func (r *Repository) CountPitchesByTag(ctx context.Context, category, tagName st
 	query := `
 		SELECT COUNT(DISTINCT p.id)
 		FROM pitches p
-		WHERE p.deleted_at IS NULL 
+		WHERE p.deleted_at IS NULL AND (p.hidden = false OR p.hidden IS NULL)
 		  AND p.main_category = $1
 		  AND p.id IN (
 			  SELECT DISTINCT pt2.pitch_id 
@@ -674,7 +680,7 @@ func (r *Repository) GetAvailableLanguages(ctx context.Context) ([]string, error
 	query := `
 		SELECT DISTINCT language 
 		FROM pitches 
-		WHERE deleted_at IS NULL AND language IS NOT NULL AND language != ''
+		WHERE deleted_at IS NULL AND (hidden = false OR hidden IS NULL) AND language IS NOT NULL AND language != ''
 		ORDER BY language
 	`
 	var languages []string
@@ -691,7 +697,7 @@ func (r *Repository) GetAvailableLanguagesByCategory(ctx context.Context, catego
 		SELECT DISTINCT language
 		FROM pitches
 		WHERE main_category = $1 
-		  AND deleted_at IS NULL
+		  AND deleted_at IS NULL AND (hidden = false OR hidden IS NULL)
 		ORDER BY language
 	`
 	var languages []string
@@ -707,7 +713,7 @@ func (r *Repository) GetLanguageUsage(ctx context.Context) (map[string]int, erro
 	query := `
 		SELECT language, COUNT(*) as count
 		FROM pitches
-		WHERE deleted_at IS NULL
+		WHERE deleted_at IS NULL AND (hidden = false OR hidden IS NULL)
 		GROUP BY language
 		ORDER BY count DESC, language
 	`
@@ -774,10 +780,10 @@ func (r *Repository) GetUserByRole(ctx context.Context, role models.UserRole) ([
 	return users, nil
 }
 
-// GetUsersByRole gets users by their role with pagination
+// GetUsersByRole gets users by role with pagination, excluding soft-deleted users
 func (r *Repository) GetUsersByRole(ctx context.Context, role models.UserRole, limit, offset int) ([]*models.User, error) {
 	var users []*models.User
-	query := `SELECT * FROM users WHERE role = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
+	query := `SELECT * FROM users WHERE role = $1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT $2 OFFSET $3`
 	err := r.db.SelectContext(ctx, &users, query, role, limit, offset)
 	if err != nil {
 		return nil, err
@@ -785,18 +791,18 @@ func (r *Repository) GetUsersByRole(ctx context.Context, role models.UserRole, l
 	return users, nil
 }
 
-// CountUsersByRole counts users by their role
+// CountUsersByRole counts users by role, excluding soft-deleted users
 func (r *Repository) CountUsersByRole(ctx context.Context, role models.UserRole) (int, error) {
 	var count int
-	query := `SELECT COUNT(*) FROM users WHERE role = $1`
+	query := `SELECT COUNT(*) FROM users WHERE role = $1 AND deleted_at IS NULL`
 	err := r.db.GetContext(ctx, &count, query, role)
 	return count, err
 }
 
-// GetAllUsers gets all users with pagination
+// GetAllUsers gets all non-deleted users with pagination
 func (r *Repository) GetAllUsers(ctx context.Context, limit, offset int) ([]*models.User, error) {
 	var users []*models.User
-	query := `SELECT * FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2`
+	query := `SELECT * FROM users WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT $1 OFFSET $2`
 	err := r.db.SelectContext(ctx, &users, query, limit, offset)
 	if err != nil {
 		return nil, err
@@ -804,10 +810,10 @@ func (r *Repository) GetAllUsers(ctx context.Context, limit, offset int) ([]*mod
 	return users, nil
 }
 
-// CountAllUsers counts all users
+// CountAllUsers counts all non-deleted users
 func (r *Repository) CountAllUsers(ctx context.Context) (int, error) {
 	var count int
-	query := `SELECT COUNT(*) FROM users`
+	query := `SELECT COUNT(*) FROM users WHERE deleted_at IS NULL`
 	err := r.db.GetContext(ctx, &count, query)
 	return count, err
 }
@@ -877,7 +883,7 @@ func (r *Repository) ListPitchesByTagAndFilters(ctx context.Context, category, t
 		LEFT JOIN tags t ON pt.tag_id = t.id
 		INNER JOIN pitch_tags pt2 ON p.id = pt2.pitch_id
 		INNER JOIN tags t2 ON pt2.tag_id = t2.id
-		WHERE p.deleted_at IS NULL 
+		WHERE p.deleted_at IS NULL AND (p.hidden = false OR p.hidden IS NULL) 
 		  AND p.main_category = $1 
 		  AND t2.name = $2
 	`
@@ -926,7 +932,7 @@ func (r *Repository) CountPitchesByTagAndFilters(ctx context.Context, category, 
 		FROM pitches p
 		INNER JOIN pitch_tags pt2 ON p.id = pt2.pitch_id
 		INNER JOIN tags t2 ON pt2.tag_id = t2.id
-		WHERE p.deleted_at IS NULL 
+		WHERE p.deleted_at IS NULL AND (p.hidden = false OR p.hidden IS NULL) 
 		  AND p.main_category = $1 
 		  AND t2.name = $2
 	`
