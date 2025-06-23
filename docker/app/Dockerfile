@@ -10,18 +10,17 @@ WORKDIR /app
 # Copy go mod files
 COPY go.mod go.sum ./
 
-# Download dependencies
-RUN go mod download
+# Download dependencies with clean cache
+RUN go clean -cache && go clean -modcache && go mod download
 
 # Copy source code
 COPY . .
 
-# Build the application with mod=readonly to ignore vendor directory
-RUN CGO_ENABLED=0 GOOS=linux go build -mod=readonly -o /app/bin/server ./cmd/server
-# Build the migration binary
-RUN CGO_ENABLED=0 GOOS=linux go build -mod=readonly -o /app/bin/migrate ./cmd/migrate
-# Build the admin token generator
-RUN CGO_ENABLED=0 GOOS=linux go build -mod=readonly -o /app/bin/admin-token ./cmd/admin-token
+# Build with clean cache to avoid cache conflicts
+RUN go clean -cache && \
+    CGO_ENABLED=0 GOOS=linux go build -mod=readonly -o /app/bin/server ./cmd/server && \
+    CGO_ENABLED=0 GOOS=linux go build -mod=readonly -o /app/bin/migrate ./cmd/migrate && \
+    CGO_ENABLED=0 GOOS=linux go build -mod=readonly -o /app/bin/admin-token ./cmd/admin-token
 
 # Final stage
 FROM alpine:3.19
