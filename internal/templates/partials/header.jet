@@ -11,6 +11,27 @@
             </a>
         </div>
         
+        <!-- Search Bar -->
+        <div class="search-container">
+            <form method="GET" action="/search" class="search-form">
+                <div class="search-input-container">
+                    <input type="text" 
+                           name="q" 
+                           placeholder="{{ t("ui.search.placeholder", currentLang) }}"
+                           class="search-input"
+                           value="{{ if isset(SearchQuery) }}{{ SearchQuery }}{{ end }}"
+                           required>
+                    <button type="submit" class="search-button">
+                        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="21 21l-4.35-4.35"></path>
+                        </svg>
+                        <span class="search-text">{{ t("ui.search.search", currentLang) }}</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+        
         <!-- Add Your Pitch Button -->
         {{ if ShowUserMenu }}
             <button class="add-pitch" hx-get="/pitch/form" hx-target="#pitch-form-modal .modal-content" hx-trigger="click">{{ t("ui.header.addPitch", currentLang) }}</button>

@@ -1,0 +1,103 @@
+<!-- Pagination Controls Top -->
+{{ if PaginationConfig.ShowTotalCount }}
+<div class="pagination-controls top">
+  <div class="total-count">
+    Showing {{ PageSize }} of {{ TotalPitches }} results
+    {{ if CurrentPage > 1 || TotalPages > 1 }}
+      (Page {{ CurrentPage }} of {{ TotalPages }})
+    {{ end }}
+  </div>
+  
+  {{ if PaginationConfig.ShowPageSizeSelector }}
+  <div class="page-size-selector">
+    <label for="page-size">Results per page:</label>
+    <select id="page-size" onchange="changeSearchPageSize(this.value)">
+      {{ range PaginationConfig.PageSizeOptions }}
+        <option value="{{ . }}" {{ if . == PageSize }}selected{{ end }}>{{ . }}</option>
+      {{ end }}
+    </select>
+  </div>
+  {{ end }}
+</div>
+{{ end }}
+
+<!-- Search Results -->
+<section class="search-results">
+  <div class="pitch-list">
+    {{ if len(pitches) > 0 }}
+      {{ range pitches }}
+        {{ include "pitch-card.jet" . }}
+      {{ end }}
+    {{ else }}
+      <div class="empty-state">
+        <div class="empty-icon">🔍</div>
+        <h2>{{ t("ui.search.noResults", currentLang) }}</h2>
+        <p>{{ t("ui.search.noResultsMessage", currentLang) }} <strong>"{{ SearchQuery }}"</strong>{{ if TagFilter || LengthFilter || AuthorFilter || LanguageFilter || CategoryFilter }} with the current filters{{ end }}.</p>
+        <div class="search-suggestions">
+          <p>{{ t("ui.search.suggestions", currentLang) }}:</p>
+          <ul>
+            <li>{{ t("ui.search.differentKeywords", currentLang) }}</li>
+            <li>{{ t("ui.search.removeFilters", currentLang) }}</li>
+            <li>{{ t("ui.search.checkSpelling", currentLang) }}</li>
+            <li>{{ t("ui.search.broaderTerms", currentLang) }}</li>
+          </ul>
+        </div>
+        {{ if ShowUserMenu }}
+        <button class="button primary" hx-get="/pitch/form" hx-target="#pitch-form-modal .modal-content">
+          Add Your Pitch
+        </button>
+        {{ end }}
+      </div>
+    {{ end }}
+  </div>
+</section>
+
+<!-- Pagination Controls Bottom -->
+{{ if TotalPages > 1 }}
+  <div class="pagination bottom">
+    <div class="pagination-info">
+      <span>Page {{ CurrentPage }} of {{ TotalPages }}</span>
+    </div>
+    
+    <div class="pagination-buttons">
+      {{ if CurrentPage > 1 }}
+        <button onclick="goToSearchPage(1, {{ PageSize }})" class="page-btn first">
+          ⟪ First
+        </button>
+        <button onclick="goToSearchPage({{ CurrentPage - 1 }}, {{ PageSize }})" class="page-btn prev">
+          ⟨ Previous
+        </button>
+      {{ end }}
+      
+      <!-- Page numbers (show 5 around current) -->
+      {{ if CurrentPage > 3 }}
+        <span class="page-ellipsis">…</span>
+      {{ end }}
+      
+      {{ range page := iter(1, TotalPages) }}
+        {{ if page >= max(1, sub(CurrentPage, 2)) && page <= min(TotalPages, add(CurrentPage, 2)) }}
+          {{ if page == CurrentPage }}
+            <span class="page-btn current">{{ page }}</span>
+          {{ else }}
+            <button onclick="goToSearchPage({{ page }}, {{ PageSize }})" class="page-btn">
+              {{ page }}
+            </button>
+          {{ end }}
+        {{ end }}
+      {{ end }}
+      
+      {{ if CurrentPage < sub(TotalPages, 2) }}
+        <span class="page-ellipsis">…</span>
+      {{ end }}
+      
+      {{ if CurrentPage < TotalPages }}
+        <button onclick="goToSearchPage({{ CurrentPage + 1 }}, {{ PageSize }})" class="page-btn next">
+          Next ⟩
+        </button>
+        <button onclick="goToSearchPage({{ TotalPages }}, {{ PageSize }})" class="page-btn last">
+          Last ⟫
+        </button>
+      {{ end }}
+    </div>
+  </div>
+{{ end }} 

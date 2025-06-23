@@ -1,0 +1,167 @@
+{{ extends "../layouts/base.jet" }}
+
+{{ block title() }}{{ Title }}{{ end }}
+
+{{ block description() }}{{ Description }}{{ end }}
+
+{{ block main() }}
+
+<div class="container">
+<!-- Search Header -->
+<div class="search-header">
+    <h1>{{ t("ui.search.resultsFor", currentLang) }}: "{{ SearchQuery }}"</h1>
+    <div class="search-info">
+        {{ if TotalPitches > 0 }}
+        <span class="search-count">{{ TotalPitches }} {{ if TotalPitches == 1 }}{{ t("ui.search.result", currentLang) }}{{ else }}{{ t("ui.search.results", currentLang) }}{{ end }} {{ t("ui.search.found", currentLang) }}</span>
+        {{ else }}
+        <span class="search-count">{{ t("ui.search.noResults", currentLang) }}</span>
+        {{ end }}
+    </div>
+    
+    <!-- Search filters and refinement -->
+    <div class="search-filters">
+        <!-- Language Filter for Search -->
+        {{ if isset(AvailableLanguages) }}
+        {{ if AvailableLanguages }}
+        {{ if len(AvailableLanguages) > 1 }}
+        <div class="search-filter-group">
+            <label>{{ t("ui.filters.byLanguage", currentLang) }}:</label>
+            <select onchange="addSearchFilter('language', this.value)" class="filter-select">
+                <option value="">{{ t("ui.filters.allLanguages", currentLang) }}</option>
+                {{ range AvailableLanguages }}
+                <option value="{{ . }}" {{ if isset(LanguageFilter) }}{{ if LanguageFilter == . }}selected{{ end }}{{ end }}>{{ . }}</option>
+                {{ end }}
+            </select>
+        </div>
+        {{ end }}
+        {{ end }}
+        {{ end }}
+        
+        <!-- Category Filter for Search -->
+        <div class="search-filter-group">
+            <label>{{ t("ui.filters.byCategory", currentLang) }}:</label>
+            <select onchange="addSearchFilter('category', this.value)" class="filter-select">
+                <option value="">{{ t("ui.filters.allCategories", currentLang) }}</option>
+                <option value="bitcoin" {{ if isset(CategoryFilter) }}{{ if CategoryFilter == "bitcoin" }}selected{{ end }}{{ end }}>{{ t("ui.navigation.bitcoin", currentLang) }}</option>
+                <option value="lightning" {{ if isset(CategoryFilter) }}{{ if CategoryFilter == "lightning" }}selected{{ end }}{{ end }}>{{ t("ui.navigation.lightning", currentLang) }}</option>
+                <option value="cashu" {{ if isset(CategoryFilter) }}{{ if CategoryFilter == "cashu" }}selected{{ end }}{{ end }}>{{ t("ui.navigation.cashu", currentLang) }}</option>
+            </select>
+        </div>
+        
+        <!-- Length Filter for Search -->
+        <div class="search-filter-group">
+            <label>{{ t("ui.filters.byLength", currentLang) }}:</label>
+            <select onchange="addSearchFilter('length', this.value)" class="filter-select">
+                <option value="">{{ t("ui.filters.allLengths", currentLang) }}</option>
+                <option value="one-liner" {{ if isset(LengthFilter) }}{{ if LengthFilter == "one-liner" }}selected{{ end }}{{ end }}>{{ t("ui.navigation.oneLiner", currentLang) }}</option>
+                <option value="sms" {{ if isset(LengthFilter) }}{{ if LengthFilter == "sms" }}selected{{ end }}{{ end }}>{{ t("ui.navigation.sms", currentLang) }}</option>
+                <option value="tweet" {{ if isset(LengthFilter) }}{{ if LengthFilter == "tweet" }}selected{{ end }}{{ end }}>{{ t("ui.navigation.tweet", currentLang) }}</option>
+                <option value="elevator" {{ if isset(LengthFilter) }}{{ if LengthFilter == "elevator" }}selected{{ end }}{{ end }}>{{ t("ui.navigation.elevator", currentLang) }}</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Active Filters Display -->
+{{ if TagFilter || LengthFilter || AuthorFilter || LanguageFilter || CategoryFilter }}
+<div class="active-filters">
+  <span class="filters-label">Active filters:</span>
+  <div class="filter-tags">
+    {{ if CategoryFilter }}
+      <span class="filter-tag">
+        Category: {{ CategoryFilter }}
+        <button type="button" onclick="removeSearchFilter('category')" class="remove-filter" aria-label="Remove category filter">&times;</button>
+      </span>
+    {{ end }}
+    {{ if TagFilter }}
+      <span class="filter-tag">
+        Tag: {{ TagFilter }}
+        <button type="button" onclick="removeSearchFilter('tag')" class="remove-filter" aria-label="Remove tag filter">&times;</button>
+      </span>
+    {{ end }}
+    {{ if LengthFilter }}
+      <span class="filter-tag">
+        Length: {{ LengthFilter }}
+        <button type="button" onclick="removeSearchFilter('length')" class="remove-filter" aria-label="Remove length filter">&times;</button>
+      </span>
+    {{ end }}
+    {{ if AuthorFilter }}
+      <span class="filter-tag">
+        Author: {{ AuthorFilter }}
+        <button type="button" onclick="removeSearchFilter('author')" class="remove-filter" aria-label="Remove author filter">&times;</button>
+      </span>
+    {{ end }}
+    {{ if LanguageFilter }}
+      <span class="filter-tag">
+        Language: {{ LanguageFilter }}
+        <button type="button" onclick="removeSearchFilter('language')" class="remove-filter" aria-label="Remove language filter">&times;</button>
+      </span>
+    {{ end }}
+    <button type="button" onclick="clearAllSearchFilters()" class="clear-all-filters">Clear All</button>
+  </div>
+</div>
+{{ end }}
+
+<!-- Search Results Content -->
+<div id="search-results-content" class="search-results-content">
+    {{ include "../partials/search-results-fragment.jet" }}
+</div>
+
+</div>
+
+<script>
+// Search-specific filter management functions
+function removeSearchFilter(filterType) {
+    const currentUrl = new URL(window.location);
+    currentUrl.searchParams.delete(filterType);
+    currentUrl.searchParams.set('page', '1'); // Reset to first page
+    window.location.href = currentUrl.toString();
+}
+
+function clearAllSearchFilters() {
+    const currentUrl = new URL(window.location);
+    const searchQuery = currentUrl.searchParams.get('q');
+    
+    // Create new URL with only the search query
+    const newUrl = new URL('/search', window.location.origin);
+    newUrl.searchParams.set('q', searchQuery);
+    
+    window.location.href = newUrl.toString();
+}
+
+// Pagination function for search results
+function goToSearchPage(page, pageSize) {
+    const currentUrl = new URL(window.location);
+    currentUrl.searchParams.set('page', page);
+    currentUrl.searchParams.set('size', pageSize);
+    window.location.href = currentUrl.toString();
+}
+
+// Page size change function for search results
+function changeSearchPageSize(newSize) {
+    const currentUrl = new URL(window.location);
+    currentUrl.searchParams.set('size', newSize);
+    currentUrl.searchParams.set('page', '1'); // Reset to first page
+    window.location.href = currentUrl.toString();
+}
+
+// Add search filter function
+function addSearchFilter(filterType, value) {
+    const currentUrl = new URL(window.location);
+    
+    if (value === '') {
+        // Remove filter if empty value selected
+        currentUrl.searchParams.delete(filterType);
+    } else {
+        // Add/update filter
+        currentUrl.searchParams.set(filterType, value);
+    }
+    
+    // Reset to first page when filtering
+    currentUrl.searchParams.set('page', '1');
+    
+    window.location.href = currentUrl.toString();
+}
+</script>
+
+{{ end }} 
