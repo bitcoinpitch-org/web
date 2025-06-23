@@ -1,0 +1,12 @@
+{{extends "layouts/base.jet"}}
+
+{{define content()}}
+<div class="error-page">
+    <h1>500 - Internal Server Error</h1>
+    <p>Sorry, something went wrong on our end. We're working to fix it.</p>
+    <div class="error-actions">
+        <a href="/" class="btn btn-primary">Go Home</a>
+        <a href="javascript:location.reload()" class="btn btn-secondary">Try Again</a>
+    </div>
+</div>
+{{end}} 

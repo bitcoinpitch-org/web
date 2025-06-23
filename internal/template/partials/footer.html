@@ -1,0 +1,39 @@
+<footer class="footer">
+    <div class="footer__container">
+        <!-- Links -->
+        <nav class="footer__nav">
+            <ul class="footer__nav-list">
+                <li class="footer__nav-item">
+                    <a href="/about" class="footer__nav-link">About</a>
+                </li>
+                <li class="footer__nav-item">
+                    <a href="/privacy" class="footer__nav-link">Privacy</a>
+                </li>
+                <li class="footer__nav-item">
+                    <a href="/terms" class="footer__nav-link">Terms</a>
+                </li>
+                <li class="footer__nav-item">
+                    <a href="https://github.com/bitcoinpitch/bitcoinpitch.org" class="footer__nav-link" target="_blank" rel="noopener">
+                        GitHub
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Copyright -->
+        <div class="footer__copyright">
+            <p>&copy; {{.CurrentYear}} BitcoinPitch.org. All rights reserved.</p>
+        </div>
+
+        <!-- Language selector -->
+        <div class="footer__language">
+            <select class="footer__language-select" hx-get="/change-language" hx-target="body" hx-push-url="false">
+                {{range .Languages}}
+                <option value="{{.Code}}" {{if eq .Code $.CurrentLanguage}}selected{{end}}>
+                    {{.Name}}
+                </option>
+                {{end}}
+            </select>
+        </div>
+    </div>
+</footer> 

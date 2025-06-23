@@ -1,0 +1,37 @@
+{{extends "layouts/base.jet"}}
+
+{{define content()}}
+<div class="test-page">
+    <h1>Template Test Page</h1>
+    <p>If you see this page with proper styling and layout, Jet template rendering is working correctly.</p>
+    
+    <div class="test-sections">
+        <section class="test-section">
+            <h2>Base Template Features</h2>
+            <ul>
+                <li>Header navigation</li>
+                <li>Footer with links</li>
+                <li>Main content area</li>
+                <li>CSS styling</li>
+            </ul>
+        </section>
+        
+        <section class="test-section">
+            <h2>Dynamic Content</h2>
+            <p>Title: {{if isset(.Title)}}{{.Title}}{{else}}No title set{{end}}</p>
+            <p>Description: {{if isset(.Description)}}{{.Description}}{{else}}No description set{{end}}</p>
+        </section>
+        
+        <section class="test-section">
+            <h2>Flash Messages</h2>
+            {{if isset(.Flash)}}
+            <div class="flash-message {{.Flash.Type}}">
+                {{.Flash.Message}}
+            </div>
+            {{else}}
+            <p>No flash message set</p>
+            {{end}}
+        </section>
+    </div>
+</div>
+{{end}} 

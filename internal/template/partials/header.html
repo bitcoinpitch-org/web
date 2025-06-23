@@ -1,0 +1,44 @@
+<header class="header">
+    <div class="header__container">
+        <!-- Logo and site name -->
+        <a href="/" class="header__logo">
+            <img src="/static/img/logo.svg" alt="BitcoinPitch.org" class="header__logo-img">
+            <span class="header__site-name">BitcoinPitch.org</span>
+        </a>
+
+        <!-- Main navigation -->
+        <nav class="header__nav">
+            <ul class="header__nav-list">
+                <li class="header__nav-item">
+                    <a href="/bitcoin" class="header__nav-link {{if eq .Category "bitcoin"}}header__nav-link--active{{end}}">
+                        Bitcoin
+                    </a>
+                </li>
+                <li class="header__nav-item">
+                    <a href="/lightning" class="header__nav-link {{if eq .Category "lightning"}}header__nav-link--active{{end}}">
+                        Lightning
+                    </a>
+                </li>
+                <li class="header__nav-item">
+                    <a href="/cashu" class="header__nav-link {{if eq .Category "cashu"}}header__nav-link--active{{end}}">
+                        Cashu
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Auth section -->
+        <div class="header__auth">
+            {{if .User}}
+                <div class="header__user">
+                    <span class="header__username">{{.User.DisplayName}}</span>
+                    <a href="/logout" class="header__logout" hx-post="/logout" hx-push-url="false">Logout</a>
+                </div>
+            {{else}}
+                <button class="header__login" hx-get="/auth" hx-target="body" hx-push-url="false">
+                    Login
+                </button>
+            {{end}}
+        </div>
+    </div>
+</header> 

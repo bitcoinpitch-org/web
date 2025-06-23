@@ -49,13 +49,14 @@
             <table class="users-table">
                 <thead>
                     <tr>
-                        <th>{{ t("admin.user_id") }}</th>
-                        <th>{{ t("admin.email") }}</th>
-                        <th>{{ t("admin.username") }}</th>
-                        <th>{{ t("admin.auth_type") }}</th>
-                        <th>{{ t("admin.role") }}</th>
-                        <th>{{ t("admin.created_at") }}</th>
-                        <th>{{ t("admin.actions") }}</th>
+                                                    <th>{{ t("admin.user_id") }}</th>
+                            <th>{{ t("admin.email") }}</th>
+                            <th>{{ t("admin.username") }}</th>
+                            <th>{{ t("admin.auth_type") }}</th>
+                            <th>{{ t("admin.role") }}</th>
+                            <th>{{ t("admin.status") }}</th>
+                            <th>{{ t("admin.created_at") }}</th>
+                            <th>{{ t("admin.actions") }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -70,17 +71,82 @@
                             <td class="user-role">
                                 <span class="role-badge role-{{ .Role }}">{{ .Role }}</span>
                             </td>
+                            <td class="user-status">
+                                <div class="status-badges">
+                                    {{ if .Disabled }}
+                                        <span class="status-badge status-disabled">{{ t("admin.disabled") }}</span>
+                                    {{ end }}
+                                    {{ if .Hidden }}
+                                        <span class="status-badge status-hidden">{{ t("admin.hidden") }}</span>
+                                    {{ end }}
+                                    {{ if .IsDeleted() }}
+                                        <span class="status-badge status-deleted">{{ t("admin.deleted") }}</span>
+                                    {{ end }}
+                                    {{ if not .Disabled && not .Hidden && not .IsDeleted() }}
+                                        <span class="status-badge status-active">{{ t("admin.active") }}</span>
+                                    {{ end }}
+                                </div>
+                            </td>
                             <td class="user-created">{{ formatDate(.CreatedAt, "2006-01-02 15:04") }}</td>
                             <td class="user-actions">
                                 {{ if .ID != CurrentUser.ID }}
-                                    <form method="POST" action="/admin/users/{{ .ID }}/role" style="display: inline;">
-                                        <input type="hidden" name="_token" value="{{ CsrfToken }}">
-                                        <select name="role" onchange="this.form.submit()" class="role-select">
-                                            <option value="user" {{ if .Role == "user" }}selected{{ end }}>{{ t("admin.user") }}</option>
-                                            <option value="moderator" {{ if .Role == "moderator" }}selected{{ end }}>{{ t("admin.moderator") }}</option>
-                                            <option value="admin" {{ if .Role == "admin" }}selected{{ end }}>{{ t("admin.admin") }}</option>
-                                        </select>
-                                    </form>
+                                    <div class="admin-controls">
+                                        <!-- Role Management -->
+                                        <form method="POST" action="/admin/users/{{ .ID }}/role" style="display: inline;">
+                                            <input type="hidden" name="_token" value="{{ CsrfToken }}">
+                                            <select name="role" onchange="this.form.submit()" class="role-select">
+                                                <option value="user" {{ if .Role == "user" }}selected{{ end }}>{{ t("admin.user") }}</option>
+                                                <option value="moderator" {{ if .Role == "moderator" }}selected{{ end }}>{{ t("admin.moderator") }}</option>
+                                                <option value="admin" {{ if .Role == "admin" }}selected{{ end }}>{{ t("admin.admin") }}</option>
+                                            </select>
+                                        </form>
+                                        
+                                        <!-- Status Management -->
+                                        <div class="status-controls">
+                                            {{ if .Disabled }}
+                                                <form method="POST" action="/admin/users/{{ .ID }}/disable" style="display: inline;">
+                                                    <input type="hidden" name="_token" value="{{ CsrfToken }}">
+                                                    <input type="hidden" name="action" value="enable">
+                                                    <button type="submit" class="admin-btn enable-btn" title="{{ t("admin.enable_user") }}">✓</button>
+                                                </form>
+                                            {{ else }}
+                                                <form method="POST" action="/admin/users/{{ .ID }}/disable" style="display: inline;">
+                                                    <input type="hidden" name="_token" value="{{ CsrfToken }}">
+                                                    <input type="hidden" name="action" value="disable">
+                                                    <button type="submit" class="admin-btn disable-btn" title="{{ t("admin.disable_user") }}">🚫</button>
+                                                </form>
+                                            {{ end }}
+                                            
+                                            {{ if .Hidden }}
+                                                <form method="POST" action="/admin/users/{{ .ID }}/hide" style="display: inline;">
+                                                    <input type="hidden" name="_token" value="{{ CsrfToken }}">
+                                                    <input type="hidden" name="action" value="show">
+                                                    <button type="submit" class="admin-btn show-btn" title="{{ t("admin.show_user") }}">👁️</button>
+                                                </form>
+                                            {{ else }}
+                                                <form method="POST" action="/admin/users/{{ .ID }}/hide" style="display: inline;">
+                                                    <input type="hidden" name="_token" value="{{ CsrfToken }}">
+                                                    <input type="hidden" name="action" value="hide">
+                                                    <button type="submit" class="admin-btn hide-btn" title="{{ t("admin.hide_user") }}">🙈</button>
+                                                </form>
+                                            {{ end }}
+                                            
+                                            {{ if .IsDeleted() }}
+                                                <form method="POST" action="/admin/users/{{ .ID }}/delete" style="display: inline;">
+                                                    <input type="hidden" name="_token" value="{{ CsrfToken }}">
+                                                    <input type="hidden" name="action" value="restore">
+                                                    <button type="submit" class="admin-btn restore-btn" title="{{ t("admin.restore_user") }}">♻️</button>
+                                                </form>
+                                            {{ else }}
+                                                <form method="POST" action="/admin/users/{{ .ID }}/delete" style="display: inline;">
+                                                    <input type="hidden" name="_token" value="{{ CsrfToken }}">
+                                                    <input type="hidden" name="action" value="delete">
+                                                    <button type="submit" class="admin-btn delete-btn" title="{{ t("admin.delete_user") }}" 
+                                                            onclick="return confirm('{{ t("admin.confirm_delete_user") }}')">🗑️</button>
+                                                </form>
+                                            {{ end }}
+                                        </div>
+                                    </div>
                                 {{ else }}
                                     <span class="current-user">{{ t("admin.current_user") }}</span>
                                 {{ end }}
@@ -248,6 +314,67 @@
     color: #6b7280;
     font-size: 0.75rem;
 }
+
+.admin-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-start;
+}
+
+.status-controls {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+}
+
+.admin-btn {
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 3px;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+    min-width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.admin-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.enable-btn:hover { background: #d1fae5; }
+.disable-btn:hover { background: #fee2e2; }
+.show-btn:hover { background: #dbeafe; }
+.hide-btn:hover { background: #f3f4f6; }
+.restore-btn:hover { background: #d1fae5; }
+.delete-btn:hover { background: #fee2e2; }
+
+.status-badges {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.125rem 0.375rem;
+    border-radius: 3px;
+    font-size: 0.625rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.status-active { background: #d1fae5; color: #065f46; }
+.status-disabled { background: #fee2e2; color: #dc2626; }
+.status-hidden { background: #f3f4f6; color: #6b7280; }
+.status-deleted { background: #fef3c7; color: #92400e; }
 
 .pagination {
     display: flex;

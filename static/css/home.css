@@ -22,14 +22,15 @@
 .add-pitch {
     display: inline-block;
     margin: .75rem auto 1.25rem;
-    padding: .65rem 1.5rem;
+    padding: .5rem 1rem;
     background: #ff9500;
     color: #fff;
-    font-weight: 700;
+    font-weight: 600;
     border: none;
-    border-radius: .55rem;
+    border-radius: .5rem;
     cursor: pointer;
     transition: background-color 0.2s, transform 0.1s;
+    font-size: 0.9rem;
 }
 
 .add-pitch:hover {

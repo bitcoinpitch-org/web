@@ -1,0 +1,49 @@
+{{define "content"}}
+<div class="error-page">
+    <h1 class="error-page__title">500 - Server Error</h1>
+    <p class="error-page__message">
+        Oops! Something went wrong on our end. We're working to fix it.
+    </p>
+    <div class="error-page__actions">
+        <a href="/" class="error-page__button">Go to Homepage</a>
+        <button class="error-page__button error-page__button--secondary" onclick="location.reload()">
+            Try Again
+        </button>
+    </div>
+</div>
+{{end}}
+
+{{define "head"}}
+<style>
+    .error-page {
+        text-align: center;
+        padding: 4rem 1rem;
+    }
+    .error-page__title {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        color: var(--color-error);
+    }
+    .error-page__message {
+        font-size: 1.2rem;
+        margin-bottom: 2rem;
+        color: var(--color-text-secondary);
+    }
+    .error-page__actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+    }
+    .error-page__button {
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    .error-page__button--secondary {
+        background: var(--color-background-secondary);
+        color: var(--color-text);
+    }
+</style>
+{{end}} 

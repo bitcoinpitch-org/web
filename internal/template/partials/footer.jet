@@ -1,0 +1,33 @@
+{{define footer()}}
+<footer class="site-footer">
+    <div class="footer-content">
+        <div class="footer-section">
+            <h3>About BitcoinPitch.org</h3>
+            <p>Share and discover Bitcoin pitches for different contexts - one-liners, SMS, tweets, and elevator pitches.</p>
+        </div>
+        
+        <div class="footer-section">
+            <h3>Quick Links</h3>
+            <ul>
+                <li><a href="/about">About</a></li>
+                <li><a href="/privacy">Privacy Policy</a></li>
+                <li><a href="/terms">Terms of Service</a></li>
+                <li><a href="https://github.com/yourusername/bitcoinpitch.org" target="_blank">GitHub</a></li>
+            </ul>
+        </div>
+        
+        <div class="footer-section">
+            <h3>Connect</h3>
+            <ul>
+                <li><a href="https://twitter.com/bitcoinpitch" target="_blank">Twitter</a></li>
+                <li><a href="https://t.me/bitcoinpitch" target="_blank">Telegram</a></li>
+                <li><a href="https://nostr.com/npub1bitcoinpitch" target="_blank">Nostr</a></li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="footer-bottom">
+        <p>&copy; {{ now.Year }} BitcoinPitch.org. All rights reserved.</p>
+    </div>
+</footer>
+{{end}} 

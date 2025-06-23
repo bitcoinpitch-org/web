@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{if isset(.Title)}}{{.Title}} - {{end}}BitcoinPitch.org</title>
+    <meta name="description" content="{{if isset(.Description)}}{{.Description}}{{else}}Share and discover Bitcoin pitches for different contexts - one-liners, SMS, tweets, and elevator pitches.{{end}}">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="/static/css/main.css">
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- Additional head content -->
+    {{yield head()}}
+</head>
+<body>
+    <!-- Header -->
+    {{yield header()}}
+    
+    <!-- Main content -->
+    <main class="container">
+        {{if isset(.Flash)}}
+        <div class="flash-message {{.Flash.Type}}">
+            {{.Flash.Message}}
+        </div>
+        {{end}}
+        
+        {{yield content()}}
+    </main>
+    
+    <!-- Footer -->
+    {{yield footer()}}
+    
+    <!-- Scripts -->
+    <script src="/static/js/main.js"></script>
+    {{yield scripts()}}
+</body>
+</html>
+
+{{define head()}}{{end}}
+{{define scripts()}}{{end}} 

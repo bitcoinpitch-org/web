@@ -1,0 +1,52 @@
+{{define "base"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{if .Title}}{{.Title}} - {{end}}BitcoinPitch.org</title>
+    <meta name="description" content="{{if .Description}}{{.Description}}{{else}}Share and discover Bitcoin pitches for different contexts - one-liners, SMS, tweets, and elevator pitches.{{end}}">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="/static/css/main.css">
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- Additional head content -->
+    {{template "head" .}}
+</head>
+<body>
+    <!-- Header -->
+    {{template "header" .}}
+    
+    <!-- Main content -->
+    <main class="container">
+        {{if .Flash}}
+        <div class="flash-message {{.Flash.Type}}">
+            {{.Flash.Message}}
+        </div>
+        {{end}}
+        
+        {{block "content" .}}{{end}}
+    </main>
+    
+    <!-- Footer -->
+    {{template "footer" .}}
+    
+    <!-- Scripts -->
+    <script src="/static/js/main.js"></script>
+    {{template "scripts" .}}
+</body>
+</html>
+{{end}}
+
+{{define "content"}}
+<div class="container">
+    <h1>Template Test Page</h1>
+    <p>This is a test page to verify our template rendering.</p>
+</div>
+{{end}} 

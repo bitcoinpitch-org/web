@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -21,21 +22,30 @@ func AuthMiddleware(repo *database.Repository) fiber.Handler {
 		// Get session token from cookie
 		sessionToken := c.Cookies("session_token")
 
+		log.Printf("[DEBUG] AuthMiddleware: path=%s, session_token present=%t", c.Path(), sessionToken != "")
+
 		if sessionToken == "" {
+			log.Printf("[DEBUG] AuthMiddleware: No session token found")
 			return c.Next()
 		}
+
+		log.Printf("[DEBUG] AuthMiddleware: Found session token: %s", sessionToken[:10]+"...")
 
 		// Get session from database
 		session, err := repo.GetSessionByToken(c.Context(), sessionToken)
 		if err != nil {
 			// Invalid session, clear cookie and continue as unauthenticated
+			log.Printf("[DEBUG] AuthMiddleware: Invalid session token, error: %v", err)
 			c.ClearCookie("session_token")
 			return c.Next()
 		}
 
+		log.Printf("[DEBUG] AuthMiddleware: Valid session found, user_id: %s, expires: %s", session.UserID, session.ExpiresAt)
+
 		// Check if session is expired
 		if session.ExpiresAt.Before(time.Now()) {
 			// Session expired, clean up
+			log.Printf("[DEBUG] AuthMiddleware: Session expired")
 			repo.DeleteSession(c.Context(), session.BaseModel.ID)
 			c.ClearCookie("session_token")
 			return c.Next()
@@ -45,10 +55,13 @@ func AuthMiddleware(repo *database.Repository) fiber.Handler {
 		user, err := repo.GetUserByID(c.Context(), session.UserID)
 		if err != nil {
 			// User not found, clean up session
+			log.Printf("[DEBUG] AuthMiddleware: User not found for session, error: %v", err)
 			repo.DeleteSession(c.Context(), session.BaseModel.ID)
 			c.ClearCookie("session_token")
 			return c.Next()
 		}
+
+		log.Printf("[DEBUG] AuthMiddleware: User found: %s (%s)", user.GetDisplayName(), user.ID)
 
 		// Set user in context
 		c.Locals("user", user)
@@ -107,12 +120,17 @@ func CreateSession(repo *database.Repository, ctx context.Context, userID uuid.U
 
 // SetSessionCookie sets the session cookie
 func SetSessionCookie(c *fiber.Ctx, token string) {
-	c.Cookie(&fiber.Cookie{
+	cookie := &fiber.Cookie{
 		Name:     "session_token",
 		Value:    token,
 		Expires:  time.Now().Add(30 * 24 * time.Hour), // 30 days
 		HTTPOnly: true,
 		Secure:   strings.HasPrefix(c.BaseURL(), "https"),
 		SameSite: "Lax",
-	})
+	}
+	
+	log.Printf("[DEBUG] SetSessionCookie: Setting cookie with token=%s, expires=%s, secure=%t, httponly=%t", 
+		token[:10]+"...", cookie.Expires, cookie.Secure, cookie.HTTPOnly)
+	
+	c.Cookie(cookie)
 }

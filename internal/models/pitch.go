@@ -34,6 +34,10 @@ type Pitch struct {
 	PostedByShowAuthMethod  *bool          `json:"posted_by_show_auth_method,omitempty" db:"posted_by_show_auth_method"`
 	PostedByShowUsername    *bool          `json:"posted_by_show_username,omitempty" db:"posted_by_show_username"`
 	PostedByShowProfileInfo *bool          `json:"posted_by_show_profile_info,omitempty" db:"posted_by_show_profile_info"`
+	// Full-text search vector (automatically managed by database trigger)
+	SearchVector *string `json:"-" db:"search_vector"`
+	// Search ranking (only populated during search queries)
+	SearchRank *float64 `json:"search_rank,omitempty" db:"search_rank"`
 	// Admin management fields
 	Hidden bool `json:"hidden" db:"hidden"`
 	// CurrentUser is set at runtime for template access, not stored in database

@@ -1,0 +1,23 @@
+{{define header()}}
+<header class="site-header">
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <a href="/" class="logo">BitcoinPitch.org</a>
+        </div>
+        
+        <div class="navbar-menu">
+            <a href="/pitches" class="nav-item">Browse Pitches</a>
+            <a href="/categories" class="nav-item">Categories</a>
+            {{if isset(.User)}}
+                <a href="/pitches/new" class="nav-item">New Pitch</a>
+                <a href="/profile" class="nav-item">Profile</a>
+                <form action="/auth/logout" method="POST" class="nav-item">
+                    <button type="submit" class="btn-link">Logout</button>
+                </form>
+            {{else}}
+                <a href="/auth/login" class="nav-item">Login</a>
+            {{end}}
+        </div>
+    </nav>
+</header>
+{{end}} 
