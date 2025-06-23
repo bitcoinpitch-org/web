@@ -233,7 +233,7 @@ func main() {
 
 	// Create Jet template engine
 	view := jet.NewSet(
-		jet.NewOSFileSystemLoader("/app/templates"),
+		jet.NewOSFileSystemLoader("/app/internal/templates"),
 		jet.InDevelopmentMode(), // Enable development mode for better error messages
 	)
 
