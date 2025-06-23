@@ -45,8 +45,8 @@ COPY --from=builder /app/bin/admin-token /app/admin-token
 # Copy static files
 COPY --from=builder /app/static /app/static
 
-# Copy templates
-COPY --from=builder /app/internal/templates /app/templates
+# Copy templates - Fixed: preserve internal/templates structure
+COPY --from=builder /app/internal/templates /app/internal/templates
 
 # Copy i18n translation files
 COPY --from=builder /app/i18n /app/i18n
