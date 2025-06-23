@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"bitcoinpitch.org/internal/config"
@@ -491,4 +492,101 @@ func APILanguageUsageHandler(c *fiber.Ctx) error {
 
 	// Return JSON response
 	return c.JSON(usage)
+}
+
+// APISearchHandler performs full-text search on pitches
+func APISearchHandler(c *fiber.Ctx) error {
+	// Get repository from context
+	repo := c.Locals("repo").(*database.Repository)
+
+	// Get search query
+	query := c.Query("q", "")
+	if strings.TrimSpace(query) == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Search query is required",
+		})
+	}
+
+	// Parse pagination parameters
+	limit := 25 // default limit for search
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+			limit = l
+		}
+	}
+
+	offset := 0 // default offset
+	if offsetStr := c.Query("offset"); offsetStr != "" {
+		if o, err := strconv.Atoi(offsetStr); err == nil && o >= 0 {
+			offset = o
+		}
+	}
+
+	// Build filters from query parameters
+	filters := make(map[string]interface{})
+	if category := c.Query("category"); category != "" {
+		filters["main_category"] = category
+	}
+	if language := c.Query("language"); language != "" {
+		filters["language"] = language
+	}
+	if lengthCategory := c.Query("length"); lengthCategory != "" {
+		filters["length_category"] = lengthCategory
+	}
+
+	// Check if there's a tag filter as well
+	tagFilter := c.Query("tag", "")
+
+	var pitches []*models.Pitch
+	var totalCount int
+	var err error
+
+	if tagFilter != "" && filters["main_category"] != nil {
+		// Search with tag filter
+		category := filters["main_category"].(string)
+		delete(filters, "main_category") // Remove from filters as it's handled separately
+
+		pitches, err = repo.SearchPitchesByTagAndFilters(c.Context(), query, category, tagFilter, filters, limit, offset)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to search pitches: " + err.Error(),
+			})
+		}
+
+		totalCount, err = repo.CountSearchPitchesByTagAndFilters(c.Context(), query, category, tagFilter, filters)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to count search results: " + err.Error(),
+			})
+		}
+	} else {
+		// Regular search
+		pitches, err = repo.SearchPitches(c.Context(), query, filters, limit, offset)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to search pitches: " + err.Error(),
+			})
+		}
+
+		totalCount, err = repo.CountSearchPitches(c.Context(), query, filters)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to count search results: " + err.Error(),
+			})
+		}
+	}
+
+	// Return JSON response
+	return c.JSON(fiber.Map{
+		"pitches": pitches,
+		"query":   query,
+		"meta": fiber.Map{
+			"limit":        limit,
+			"offset":       offset,
+			"total_count":  totalCount,
+			"total_pages":  (totalCount + limit - 1) / limit,
+			"current_page": (offset / limit) + 1,
+		},
+		"filters": filters,
+	})
 }

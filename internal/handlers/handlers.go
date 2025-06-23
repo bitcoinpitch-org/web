@@ -1053,3 +1053,186 @@ func addFooterConfig(c *fiber.Ctx, vars jet.VarMap) {
 	vars.Set("FooterConfig", footerConfig)
 	println("[DEBUG] addFooterConfig: successfully set footer config")
 }
+
+// SearchHandler handles full-text search requests from the UI
+func SearchHandler(c *fiber.Ctx) error {
+	view := c.Locals("view").(*jet.Set)
+
+	// Get search query
+	searchQuery := c.Query("q", "")
+	if strings.TrimSpace(searchQuery) == "" {
+		// If no search query, redirect to home
+		return c.Redirect("/")
+	}
+
+	// Get user from context if authenticated
+	user, _ := c.Locals("user").(*models.User)
+
+	vars := make(jet.VarMap)
+	vars.Set("Title", "Search Results for \""+searchQuery+"\"")
+	vars.Set("Description", "Search results for \""+searchQuery+"\" on BitcoinPitch.org")
+	vars.Set("SearchQuery", searchQuery)
+
+	// Set user in template context
+	if user != nil {
+		vars.Set("User", user)
+		vars.Set("UserDisplayName", user.GetDisplayName())
+		vars.Set("AuthStatus", "authenticated")
+		vars.Set("ShowUserMenu", true)
+	} else {
+		vars.Set("AuthStatus", "anonymous")
+		vars.Set("ShowUserMenu", false)
+	}
+
+	// Set current language from i18n middleware
+	if currentLang := c.Locals("currentLang"); currentLang != nil {
+		vars.Set("currentLang", currentLang)
+	} else {
+		vars.Set("currentLang", "en") // fallback to English
+	}
+
+	repo := c.Locals("repo").(*database.Repository)
+	configService := c.Locals("configService").(*config.Service)
+
+	// Get pagination configuration
+	paginationConfig := configService.PaginationConfig(c.Context())
+
+	// Parse pagination parameters
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	if page < 1 {
+		page = 1
+	}
+
+	// Determine default page size
+	defaultPageSize := paginationConfig.DefaultPageSize
+	if user != nil && user.GetPageSize() > 0 {
+		defaultPageSize = user.GetPageSize()
+	}
+
+	// Parse page size from query parameter
+	pageSize := defaultPageSize
+	if pageSizeStr := c.Query("size"); pageSizeStr != "" {
+		if size, err := strconv.Atoi(pageSizeStr); err == nil && size > 0 {
+			// Validate against allowed page sizes
+			for _, allowedSize := range paginationConfig.PageSizeOptions {
+				if size == allowedSize {
+					pageSize = size
+					break
+				}
+			}
+		}
+	}
+
+	offset := (page - 1) * pageSize
+
+	// Parse filter parameters
+	categoryFilter := c.Query("category", "")
+	lengthFilter := c.Query("length", "")
+	languageFilter := c.Query("language", "")
+	authorFilter := c.Query("author", "")
+	tagFilter := c.Query("tag", "")
+
+	// Set filter values in template for display
+	vars.Set("TagFilter", tagFilter)
+	vars.Set("LengthFilter", lengthFilter)
+	vars.Set("AuthorFilter", authorFilter)
+	vars.Set("LanguageFilter", languageFilter)
+	vars.Set("CategoryFilter", categoryFilter)
+
+	// Build filters map
+	filters := make(map[string]interface{})
+	if categoryFilter != "" {
+		filters["main_category"] = categoryFilter
+	}
+	if lengthFilter != "" {
+		filters["length_category"] = lengthFilter
+	}
+	if languageFilter != "" {
+		filters["language"] = languageFilter
+	}
+	if authorFilter == "me" && user != nil {
+		filters["user_id"] = user.ID
+	}
+
+	var pitches []*models.Pitch
+	var totalPitches int
+	var err error
+
+	if tagFilter != "" && categoryFilter != "" {
+		// Search with tag filter and category
+		pitches, err = repo.SearchPitchesByTagAndFilters(c.Context(), searchQuery, categoryFilter, tagFilter, filters, pageSize, offset)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to search pitches: " + err.Error())
+		}
+		totalPitches, err = repo.CountSearchPitchesByTagAndFilters(c.Context(), searchQuery, categoryFilter, tagFilter, filters)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to count search results: " + err.Error())
+		}
+	} else {
+		// Regular search
+		pitches, err = repo.SearchPitches(c.Context(), searchQuery, filters, pageSize, offset)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to search pitches: " + err.Error())
+		}
+		totalPitches, err = repo.CountSearchPitches(c.Context(), searchQuery, filters)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to count search results: " + err.Error())
+		}
+	}
+
+	// Set current user and vote information for each pitch
+	for i := range pitches {
+		pitches[i].CurrentUser = user
+		if user != nil {
+			currentVote, err := repo.GetVote(c.Context(), pitches[i].ID, user.ID)
+			if err != nil && err != database.ErrNotFound {
+				println("[DEBUG] Error getting current vote for pitch", pitches[i].ID.String(), ":", err.Error())
+			}
+			pitches[i].CurrentUserVote = currentVote
+		}
+	}
+
+	// Calculate pagination info
+	totalPages := (totalPitches + pageSize - 1) / pageSize
+	if totalPages < 1 {
+		totalPages = 1
+	}
+
+	// Set template variables
+	vars.Set("pitches", pitches)
+	vars.Set("CurrentPage", page)
+	vars.Set("TotalPages", totalPages)
+	vars.Set("TotalPitches", totalPitches)
+	vars.Set("PageSize", pageSize)
+	vars.Set("PaginationConfig", paginationConfig)
+
+	if csrfToken := c.Locals("csrf"); csrfToken != nil {
+		vars.Set("CsrfToken", csrfToken)
+	}
+
+	// Add footer configuration
+	addFooterConfig(c, vars)
+
+	// Check if this is an HTMX request for pagination or search
+	isHTMX := c.Get("HX-Request") == "true"
+	var templateName string
+	if isHTMX {
+		// For HTMX requests, return only the search results fragment
+		templateName = "partials/search-results-fragment.jet"
+	} else {
+		// For regular requests, return the full search results page
+		templateName = "pages/search-results.jet"
+	}
+
+	t, err := view.GetTemplate(templateName)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString("Template error: " + err.Error())
+	}
+
+	var buf bytes.Buffer
+	if err := t.Execute(&buf, vars, nil); err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString("Template execution error: " + err.Error())
+	}
+
+	return c.Type("html").Send(buf.Bytes())
+}
