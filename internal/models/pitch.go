@@ -34,6 +34,8 @@ type Pitch struct {
 	PostedByShowAuthMethod  *bool          `json:"posted_by_show_auth_method,omitempty" db:"posted_by_show_auth_method"`
 	PostedByShowUsername    *bool          `json:"posted_by_show_username,omitempty" db:"posted_by_show_username"`
 	PostedByShowProfileInfo *bool          `json:"posted_by_show_profile_info,omitempty" db:"posted_by_show_profile_info"`
+	// Admin management fields
+	Hidden bool `json:"hidden" db:"hidden"`
 	// CurrentUser is set at runtime for template access, not stored in database
 	CurrentUser *User `json:"-" db:"-"`
 	// CurrentUserVote is set at runtime for template access, not stored in database
@@ -160,6 +162,36 @@ func (p *Pitch) GetAuthorHandleForTwitter() string {
 		return handle[1:]
 	}
 	return handle
+}
+
+// Admin management methods
+
+// IsHidden returns true if the pitch is hidden
+func (p *Pitch) IsHidden() bool {
+	return p.Hidden
+}
+
+// SetHidden sets the hidden status
+func (p *Pitch) SetHidden(hidden bool) {
+	p.Hidden = hidden
+	p.UpdatedAt = time.Now()
+}
+
+// Hide marks the pitch as hidden
+func (p *Pitch) Hide() {
+	p.Hidden = true
+	p.UpdatedAt = time.Now()
+}
+
+// Unhide marks the pitch as visible
+func (p *Pitch) Unhide() {
+	p.Hidden = false
+	p.UpdatedAt = time.Now()
+}
+
+// IsVisible returns true if pitch should be visible in public lists
+func (p *Pitch) IsVisible() bool {
+	return !p.Hidden && !p.IsDeleted()
 }
 
 // Vote represents a vote on a pitch

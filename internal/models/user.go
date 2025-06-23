@@ -34,6 +34,10 @@ type User struct {
 	PasswordResetExpiresAt *time.Time `json:"-" db:"password_reset_expires_at"`
 	// Pagination preference
 	PageSize *int `json:"page_size,omitempty" db:"page_size"`
+	// Admin management fields
+	Disabled  bool       `json:"disabled" db:"disabled"`
+	Hidden    bool       `json:"hidden" db:"hidden"`
+	DeletedAt *time.Time `json:"deleted_at,omitempty" db:"deleted_at"`
 }
 
 // NewUser creates a new user with the given authentication details
@@ -266,12 +270,65 @@ func (u *User) ShouldShowProfileInfo() bool {
 	return u.ShowProfileInfo
 }
 
+// Admin management methods
+
+// IsDisabled returns true if the user is disabled
+func (u *User) IsDisabled() bool {
+	return u.Disabled
+}
+
+// IsHidden returns true if the user is hidden
+func (u *User) IsHidden() bool {
+	return u.Hidden
+}
+
+// IsDeleted returns true if the user is soft deleted
+func (u *User) IsDeleted() bool {
+	return u.DeletedAt != nil
+}
+
+// SetDisabled sets the disabled status
+func (u *User) SetDisabled(disabled bool) {
+	u.Disabled = disabled
+	u.UpdatedAt = time.Now()
+}
+
+// SetHidden sets the hidden status
+func (u *User) SetHidden(hidden bool) {
+	u.Hidden = hidden
+	u.UpdatedAt = time.Now()
+}
+
+// SoftDelete marks the user as deleted
+func (u *User) SoftDelete() {
+	now := time.Now()
+	u.DeletedAt = &now
+	u.UpdatedAt = now
+}
+
+// Restore removes the soft delete
+func (u *User) Restore() {
+	u.DeletedAt = nil
+	u.UpdatedAt = time.Now()
+}
+
+// CanLogin returns true if user can login (not disabled and not deleted)
+func (u *User) CanLogin() bool {
+	return !u.Disabled && !u.IsDeleted()
+}
+
+// IsVisible returns true if user should be visible in public lists
+func (u *User) IsVisible() bool {
+	return !u.Hidden && !u.IsDeleted()
+}
+
 // Session represents a user session
 type Session struct {
 	BaseModel
 	UserID    uuid.UUID `json:"user_id" db:"user_id"`
 	Token     string    `json:"token" db:"token"`
 	ExpiresAt time.Time `json:"expires_at" db:"expires_at"`
+	ReadOnly  bool      `json:"read_only" db:"read_only"`
 }
 
 // NewSession creates a new session for a user
@@ -286,6 +343,7 @@ func NewSession(userID uuid.UUID, token string, expiresAt time.Time) *Session {
 		UserID:    userID,
 		Token:     token,
 		ExpiresAt: expiresAt,
+		ReadOnly:  false, // Default to false for regular sessions
 	}
 }
 
