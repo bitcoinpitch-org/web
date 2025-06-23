@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	"bitcoinpitch.org/internal/models"
@@ -1306,4 +1307,270 @@ func (r *Repository) GetContentHashesByHash(ctx context.Context, hash string) ([
 	}
 
 	return hashes, rows.Err()
+}
+
+// SearchPitches performs full-text search on pitches
+func (r *Repository) SearchPitches(ctx context.Context, query string, filters map[string]interface{}, limit, offset int) ([]*models.Pitch, error) {
+	// Sanitize search query and prepare for PostgreSQL tsquery
+	searchQuery := r.sanitizeSearchQuery(query)
+
+	baseQuery := `
+		SELECT p.*, 
+		       u.display_name as posted_by_display_name,
+		       u.auth_type as posted_by_auth_type,
+		       u.username as posted_by_username,
+		       u.show_auth_method as posted_by_show_auth_method,
+		       u.show_username as posted_by_show_username,
+		       u.show_profile_info as posted_by_show_profile_info,
+		       COALESCE(json_agg(jsonb_build_object(
+		         'id', t.id,
+		         'name', t.name,
+		         'usage_count', t.usage_count,
+		         'created_at', t.created_at,
+		         'updated_at', t.updated_at
+		       )) FILTER (WHERE t.id IS NOT NULL), '[]') AS tags,
+		       ts_rank(p.search_vector, plainto_tsquery('english', $1)) as search_rank
+		FROM pitches p
+		LEFT JOIN users u ON p.posted_by = u.id
+		LEFT JOIN pitch_tags pt ON p.id = pt.pitch_id
+		LEFT JOIN tags t ON pt.tag_id = t.id
+		WHERE p.deleted_at IS NULL 
+		  AND (p.hidden = false OR p.hidden IS NULL)
+		  AND p.search_vector @@ plainto_tsquery('english', $1)
+	`
+
+	args := []interface{}{searchQuery}
+	argCount := 2
+
+	// Add filters with explicit column mapping for safety
+	if len(filters) > 0 {
+		for key, value := range filters {
+			switch key {
+			case "main_category":
+				baseQuery += fmt.Sprintf(" AND p.main_category = $%d", argCount)
+				args = append(args, value)
+				argCount++
+			case "language":
+				baseQuery += fmt.Sprintf(" AND p.language = $%d", argCount)
+				args = append(args, value)
+				argCount++
+			case "length_category":
+				baseQuery += fmt.Sprintf(" AND p.length_category = $%d", argCount)
+				args = append(args, value)
+				argCount++
+			case "user_id":
+				baseQuery += fmt.Sprintf(" AND p.user_id = $%d", argCount)
+				args = append(args, value)
+				argCount++
+			}
+		}
+	}
+
+	baseQuery += `
+		GROUP BY p.id, u.display_name, u.auth_type, u.username, u.show_auth_method, u.show_username, u.show_profile_info, p.search_vector
+		ORDER BY search_rank DESC, p.score DESC, p.created_at DESC
+		LIMIT $` + fmt.Sprintf("%d", argCount) + `
+		OFFSET $` + fmt.Sprintf("%d", argCount+1)
+	args = append(args, limit, offset)
+
+	var pitches []*models.Pitch
+	err := r.db.SelectContext(ctx, &pitches, baseQuery, args...)
+	if err != nil {
+		return nil, err
+	}
+	return pitches, nil
+}
+
+// CountSearchPitches counts results for full-text search
+func (r *Repository) CountSearchPitches(ctx context.Context, query string, filters map[string]interface{}) (int, error) {
+	// Sanitize search query and prepare for PostgreSQL tsquery
+	searchQuery := r.sanitizeSearchQuery(query)
+
+	baseQuery := `
+		SELECT COUNT(DISTINCT p.id)
+		FROM pitches p
+		WHERE p.deleted_at IS NULL 
+		  AND (p.hidden = false OR p.hidden IS NULL)
+		  AND p.search_vector @@ plainto_tsquery('english', $1)
+	`
+
+	args := []interface{}{searchQuery}
+	argCount := 2
+
+	// Add filters with explicit column mapping for safety
+	if len(filters) > 0 {
+		for key, value := range filters {
+			switch key {
+			case "main_category":
+				baseQuery += fmt.Sprintf(" AND p.main_category = $%d", argCount)
+				args = append(args, value)
+				argCount++
+			case "language":
+				baseQuery += fmt.Sprintf(" AND p.language = $%d", argCount)
+				args = append(args, value)
+				argCount++
+			case "length_category":
+				baseQuery += fmt.Sprintf(" AND p.length_category = $%d", argCount)
+				args = append(args, value)
+				argCount++
+			case "user_id":
+				baseQuery += fmt.Sprintf(" AND p.user_id = $%d", argCount)
+				args = append(args, value)
+				argCount++
+			}
+		}
+	}
+
+	var count int
+	err := r.db.GetContext(ctx, &count, baseQuery, args...)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+// SearchPitchesByTagAndFilters performs full-text search on pitches with tag and additional filters
+func (r *Repository) SearchPitchesByTagAndFilters(ctx context.Context, query, category, tagName string, filters map[string]interface{}, limit, offset int) ([]*models.Pitch, error) {
+	// Sanitize search query and prepare for PostgreSQL tsquery
+	searchQuery := r.sanitizeSearchQuery(query)
+
+	baseQuery := `
+		SELECT p.*, 
+		       u.display_name as posted_by_display_name,
+		       u.auth_type as posted_by_auth_type,
+		       u.username as posted_by_username,
+		       u.show_auth_method as posted_by_show_auth_method,
+		       u.show_username as posted_by_show_username,
+		       u.show_profile_info as posted_by_show_profile_info,
+		       COALESCE(json_agg(jsonb_build_object(
+		         'id', t.id,
+		         'name', t.name,
+		         'usage_count', t.usage_count,
+		         'created_at', t.created_at,
+		         'updated_at', t.updated_at
+		       )) FILTER (WHERE t.id IS NOT NULL), '[]') AS tags,
+		       ts_rank(p.search_vector, plainto_tsquery('english', $1)) as search_rank
+		FROM pitches p
+		LEFT JOIN users u ON p.posted_by = u.id
+		LEFT JOIN pitch_tags pt ON p.id = pt.pitch_id
+		LEFT JOIN tags t ON pt.tag_id = t.id
+		INNER JOIN pitch_tags pt2 ON p.id = pt2.pitch_id
+		INNER JOIN tags t2 ON pt2.tag_id = t2.id
+		WHERE p.deleted_at IS NULL 
+		  AND (p.hidden = false OR p.hidden IS NULL)
+		  AND p.search_vector @@ plainto_tsquery('english', $1)
+		  AND p.main_category = $2
+		  AND t2.name = $3
+	`
+
+	args := []interface{}{searchQuery, category, tagName}
+	argCount := 4
+
+	// Add additional filters with explicit column mapping for safety
+	if len(filters) > 0 {
+		for key, value := range filters {
+			switch key {
+			case "language":
+				baseQuery += fmt.Sprintf(" AND p.language = $%d", argCount)
+				args = append(args, value)
+				argCount++
+			case "length_category":
+				baseQuery += fmt.Sprintf(" AND p.length_category = $%d", argCount)
+				args = append(args, value)
+				argCount++
+			case "user_id":
+				baseQuery += fmt.Sprintf(" AND p.user_id = $%d", argCount)
+				args = append(args, value)
+				argCount++
+			}
+		}
+	}
+
+	baseQuery += `
+		GROUP BY p.id, u.display_name, u.auth_type, u.username, u.show_auth_method, u.show_username, u.show_profile_info, p.search_vector
+		ORDER BY search_rank DESC, p.score DESC, p.created_at DESC
+		LIMIT $` + fmt.Sprintf("%d", argCount) + `
+		OFFSET $` + fmt.Sprintf("%d", argCount+1)
+	args = append(args, limit, offset)
+
+	var pitches []*models.Pitch
+	err := r.db.SelectContext(ctx, &pitches, baseQuery, args...)
+	if err != nil {
+		return nil, err
+	}
+	return pitches, nil
+}
+
+// CountSearchPitchesByTagAndFilters counts results for full-text search with tag and additional filters
+func (r *Repository) CountSearchPitchesByTagAndFilters(ctx context.Context, query, category, tagName string, filters map[string]interface{}) (int, error) {
+	// Sanitize search query and prepare for PostgreSQL tsquery
+	searchQuery := r.sanitizeSearchQuery(query)
+
+	baseQuery := `
+		SELECT COUNT(DISTINCT p.id)
+		FROM pitches p
+		INNER JOIN pitch_tags pt2 ON p.id = pt2.pitch_id
+		INNER JOIN tags t2 ON pt2.tag_id = t2.id
+		WHERE p.deleted_at IS NULL 
+		  AND (p.hidden = false OR p.hidden IS NULL)
+		  AND p.search_vector @@ plainto_tsquery('english', $1)
+		  AND p.main_category = $2
+		  AND t2.name = $3
+	`
+
+	args := []interface{}{searchQuery, category, tagName}
+	argCount := 4
+
+	// Add additional filters with explicit column mapping for safety
+	if len(filters) > 0 {
+		for key, value := range filters {
+			switch key {
+			case "language":
+				baseQuery += fmt.Sprintf(" AND p.language = $%d", argCount)
+				args = append(args, value)
+				argCount++
+			case "length_category":
+				baseQuery += fmt.Sprintf(" AND p.length_category = $%d", argCount)
+				args = append(args, value)
+				argCount++
+			case "user_id":
+				baseQuery += fmt.Sprintf(" AND p.user_id = $%d", argCount)
+				args = append(args, value)
+				argCount++
+			}
+		}
+	}
+
+	var count int
+	err := r.db.GetContext(ctx, &count, baseQuery, args...)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+// sanitizeSearchQuery sanitizes and prepares search query for PostgreSQL full-text search
+func (r *Repository) sanitizeSearchQuery(query string) string {
+	// Remove any existing special characters that could interfere with tsquery
+	// PostgreSQL full-text search uses specific operators like &, |, !, etc.
+	// For safety, we'll use plainto_tsquery which handles the sanitization
+
+	// Basic trimming and normalization
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return ""
+	}
+
+	// Remove potentially problematic characters for safety
+	query = strings.ReplaceAll(query, "'", "")
+	query = strings.ReplaceAll(query, "\"", "")
+	query = strings.ReplaceAll(query, ";", "")
+	query = strings.ReplaceAll(query, "--", "")
+
+	// Limit query length to prevent abuse
+	if len(query) > 200 {
+		query = query[:200]
+	}
+
+	return query
 }

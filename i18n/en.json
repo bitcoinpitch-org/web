@@ -66,8 +66,26 @@
       "byLength": "By Length",
       "byAuthor": "By Author",
       "byLanguage": "By Language",
+      "byCategory": "By Category",
       "allLanguages": "All Languages",
+      "allCategories": "All Categories",
+      "allLengths": "All Lengths",
       "myPitches": "My Pitches"
+    },
+    "search": {
+      "placeholder": "Search pitches...",
+      "search": "Search",
+      "resultsFor": "Results for",
+      "results": "results",
+      "result": "result", 
+      "found": "found",
+      "noResults": "No results found",
+      "noResultsMessage": "No pitches match your search",
+      "suggestions": "Try",
+      "differentKeywords": "Different keywords",
+      "removeFilters": "Removing some filters",
+      "checkSpelling": "Checking your spelling",
+      "broaderTerms": "Using broader search terms"
     },
     "common": {
       "loading": "Loading...",

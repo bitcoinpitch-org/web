@@ -195,6 +195,9 @@ func SetupRoutes(app *fiber.App, view *jet.Set, repo *database.Repository, confi
 	authGroup.Post("/register", handlers.RegisterHandler)
 	authGroup.Get("/verify-email", handlers.VerifyEmailHandler)
 
+	// Search routes
+	app.Get("/search", handlers.SearchHandler) // Main search page
+
 	// User routes
 	userGroup := app.Group("/user")
 	userGroup.Use(middleware.AuthMiddleware(repo))
@@ -293,6 +296,9 @@ func SetupRoutes(app *fiber.App, view *jet.Set, repo *database.Repository, confi
 
 	// Language routes
 	api.Get("/languages/usage", handlers.APILanguageUsageHandler)
+
+	// Search routes
+	api.Get("/search", handlers.APISearchHandler)
 
 	// Admin routes (require admin role)
 	log.Println("[DEBUG] Setting up admin routes...")

@@ -65,8 +65,26 @@
       "byLength": "Podle délky",
       "byAuthor": "Podle autora",
       "byLanguage": "Podle jazyka",
+      "byCategory": "Podle kategorie",
       "allLanguages": "Všechny jazyky",
+      "allCategories": "Všechny kategorie",
+      "allLengths": "Všechny délky",
       "myPitches": "Moje pitches"
+    },
+    "search": {
+      "placeholder": "Hledat pitche...",
+      "search": "Hledat",
+      "resultsFor": "Výsledky pro",
+      "results": "výsledky",
+      "result": "výsledek",
+      "found": "nalezen",
+      "noResults": "Žádné výsledky",
+      "noResultsMessage": "Žádné pitche neodpovídají vašemu hledání",
+      "suggestions": "Zkuste",
+      "differentKeywords": "Jiná klíčová slova",
+      "removeFilters": "Odstranění některých filtrů",
+      "checkSpelling": "Kontrolu pravopisu",
+      "broaderTerms": "Širší vyhledávací termíny"
     },
     "common": {
       "loading": "Načítání...",
